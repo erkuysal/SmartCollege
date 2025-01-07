@@ -27,14 +27,14 @@
     >
       <v-sheet class="mt-4 text-center">
         <v-list density="comfortable">
-          <v-list-item to="/admin/students">
+          <v-list-item @click="toListStudents">
             <v-list-item-title>
               <v-icon>mdi-account-group</v-icon>
             </v-list-item-title>
             <v-list-item-title>Students</v-list-item-title>
           </v-list-item>
 
-          <v-list-item to="/admin/register-student">
+          <v-list-item @click="toAddStudent">
             <v-list-item-title>
               <v-icon>mdi-account-plus</v-icon>
             </v-list-item-title>
@@ -64,10 +64,22 @@
 import { ref, computed } from 'vue'
 import { useDisplay } from 'vuetify'
 
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
 // Drawer state
 const drawerOpen = ref(true)
 function toggleDrawer() {
   drawerOpen.value = !drawerOpen.value
+}
+
+const toAddStudent = async () => {
+  await router.push({name: 'addStudent', params:{}})
+}
+
+const toListStudents = async () => {
+  await router.push({name: 'listStudents', params:{}})
 }
 
 // Determine if we’re on a small device

@@ -3,6 +3,7 @@ import ManagementLayout from "@/views/layouts/ManagementLayout.vue";
 
 // Pages
 import AddStudentPage from "@/views/pages/AddStudentPage.vue";
+import ListStudentPage from "@/views/pages/ListStudentPage.vue";
 
 const managementRoutes = [
   {
@@ -12,10 +13,14 @@ const managementRoutes = [
     children: [
       {
         path: '/student/add',
-        name: 'managementAdd',
+        name: 'addStudent',
         component: AddStudentPage,
       },
-      // {},
+      {
+        path: '/students',
+        name: 'listStudents',
+        component: ListStudentPage,
+      },
     ],
   },
 ]
