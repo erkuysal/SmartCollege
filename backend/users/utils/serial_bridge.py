@@ -49,33 +49,41 @@ def read_from_arduino():
     Sends 'READ' to Arduino and expects:
       - 'DATA:<some_string>' or
       - 'READ_FAIL'
-    Returns {"data": "..."} or {"error": "..."} accordingly.
+    Filters out debug/logging lines from the Arduino and returns the relevant response.
     """
     print(f"[DEBUG] Connecting to {ARDUINO_PORT} at {BAUD_RATE} baud...")
     try:
         with serial.Serial(ARDUINO_PORT, BAUD_RATE, timeout=TIMEOUT) as ser:
             print("[DEBUG] Connected to Arduino. Flushing input...")
-            time.sleep(2)  # Give Arduino time to reset if needed
+            time.sleep(2)  # Allow Arduino to reset if needed
             ser.flushInput()
 
+            # Send the READ command
             command = "READ\n"
             print(f"[DEBUG] Sending command to Arduino: {command.strip()}")
             ser.write(command.encode('utf-8'))
 
-            # Read a single line for the response
-            response = ser.readline().decode('utf-8').strip()
-            print(f"[DEBUG] Line from Arduino: {response}")
+            # Loop to filter out debug/logging messages
+            while True:
+                response = ser.readline().decode('utf-8').strip()
+                print(f"[DEBUG] Line from Arduino: {response}")
 
-            if response.startswith("DATA:"):
-                card_data = response[5:]  # remove "DATA:"
-                return {"data": card_data}
-            elif response == "READ_FAIL":
-                return {"error": "Arduino reported READ_FAIL."}
-            else:
-                return {"error": f"Unexpected response: {response}"}
+                # Check for valid responses
+                if response.startswith("DATA:"):
+                    card_data = response[5:]  # Extract data after "DATA:"
+                    return {"data": card_data}
+                elif response == "READ_FAIL":
+                    return {"error": "Arduino reported READ_FAIL."}
+
+                # Ignore debug/logging lines and continue reading
+                if response.startswith("[INFO]") or response.startswith("[ERROR]"):
+                    continue  # Skip and wait for the actual data
+                else:
+                    return {"error": f"Unexpected response: {response}"}
     except serial.SerialException as e:
         print(f"[DEBUG] Serial connection error: {e}")
         return {"error": f"Serial connection error: {str(e)}"}
     except Exception as e:
         print(f"[DEBUG] General exception: {e}")
         return {"error": str(e)}
+
