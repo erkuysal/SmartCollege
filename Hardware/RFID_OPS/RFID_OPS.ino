@@ -1,62 +1,40 @@
 #include "RFIDHandler.h"
 #include "BackendHandler.h"
 
-// Menu States
-enum MenuOption { MENU_IDLE, MENU_WRITE, MENU_READ, MENU_SEND, MENU_READ_BLOCK, MENU_DUMP_CARD };
-MenuOption currentOption = MENU_IDLE;
+// Default Configurations
+const char* backendBaseURL = DEFAULT_BACKEND_BASE_URL;
+
+String getWriteEndpoint(String studentNumber) {
+    return String(backendBaseURL) + "api/students/" + studentNumber + "/card/write/";
+}
+
+String getReadEndpoint() {
+    return String(backendBaseURL) + "api/students/card/read/";
+}
 
 void setup() {
-  Serial.begin(9600);
-  RFIDHandler::initRFID();
+    Serial.begin(115200);
+    RFIDHandler::initRFID();
 
-  Serial.println("Welcome to RFID Menu System!");
-  Serial.println("Type the option number and press Enter:");
-  Serial.println("1: Write Student Number to RFID");
-  Serial.println("2: Read Student Number from RFID");
-  Serial.println("3: Send Student Number to Backend");
-  Serial.println("4: Read Arbitrary Data Block");
-  Serial.println("5: Dump Card Details");
+    if (BackendHandler::connectToWiFi()) {
+        Serial.println("Connected to Wi-Fi.");
+    } else {
+        Serial.println("Failed to connect to Wi-Fi.");
+    }
 }
 
 void loop() {
-  if (Serial.available()) {
-    char option = Serial.read();
-    switch (option) {
-      case '1':
-        currentOption = MENU_WRITE;
-        Serial.println("Selected: Write to RFID");
-        RFIDHandler::writeToRFID();
-        break;
-      case '2':
-        currentOption = MENU_READ;
-        Serial.println("Selected: Read from RFID");
-        RFIDHandler::readFromRFID();
-        break;
-      case '3':
-        currentOption = MENU_SEND;
-        Serial.println("Selected: Send to Backend");
-        BackendHandler::sendToBackend();
-        break;
-      case '4':
-        currentOption = MENU_READ_BLOCK;
-        Serial.println("Selected: Read Arbitrary Data Block");
-        RFIDHandler::readArbitraryBlock();
-        break;
-      case '5':
-        currentOption = MENU_DUMP_CARD;
-        Serial.println("Selected: Dump Card Details");
-        RFIDHandler::dumpCardDetails();
-        break;
-      default:
-        Serial.println("Invalid option. Try again.");
-        break;
+    // Example: Reading RFID card
+    String cardData = RFIDHandler::readFromRFID();
+    if (cardData != "") {
+        Serial.println("Read from RFID: " + cardData);
+
+        String readEndpoint = getReadEndpoint();
+        String payload = "{\"card_data\":\"" + cardData + "\"}";
+        String response = BackendHandler::sendToBackend(readEndpoint, payload);
+
+        Serial.println("Backend Response (Validation): " + response);
     }
-    currentOption = MENU_IDLE;
-    Serial.println("\nType the option number and press Enter:");
-    Serial.println("1: Write Student Number to RFID");
-    Serial.println("2: Read Student Number from RFID");
-    Serial.println("3: Send Student Number to Backend");
-    Serial.println("4: Read Arbitrary Data Block");
-    Serial.println("5: Dump Card Details");
-  }
+
+    delay(5000);
 }
