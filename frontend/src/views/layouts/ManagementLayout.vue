@@ -1,18 +1,15 @@
-<!-- layouts/AdminLayout.vue -->
 <template>
   <v-app>
     <!-- Top App Bar -->
-    <v-app-bar
-      color="primary"
-      dark
-      app
-    >
+    <v-app-bar color="primary" dark app>
       <v-app-bar-nav-icon @click="toggleDrawer" />
       <v-toolbar-title class="ml-5">
         Admin Dashboard
       </v-toolbar-title>
       <v-spacer />
-      <!-- Optional: user icon or menu -->
+      <v-btn :icon="mdi-credit-card-scan" @click="handleReadRFID">
+        <v-icon>mdi-credit-card-scan</v-icon>
+      </v-btn>
       <v-btn :icon="mdi-account-circle">
         <v-icon>mdi-account-circle</v-icon>
       </v-btn>
@@ -41,7 +38,7 @@
             <v-list-item-title>Register Student</v-list-item-title>
           </v-list-item>
 
-          <v-list-item to="/admin/classrooms">
+          <v-list-item @click="toClassrooms">
             <v-list-item-title>
               <v-icon>mdi-book-education</v-icon>
             </v-list-item-title>
@@ -61,37 +58,56 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
-import { useDisplay } from 'vuetify'
-
+import { ref, computed } from "vue";
+import { useDisplay } from "vuetify";
 import { useRouter } from "vue-router";
+import { useStudentStore } from "@/utils/stores/studentStore";
 
+const studentStore = useStudentStore();
+const { readRFID, rfidMessage } = studentStore;
 const router = useRouter();
 
 // Drawer state
-const drawerOpen = ref(true)
+const drawerOpen = ref(true);
 function toggleDrawer() {
-  drawerOpen.value = !drawerOpen.value
+  drawerOpen.value = !drawerOpen.value;
 }
 
+// Navigation
 const toAddStudent = async () => {
-  await router.push({name: 'addStudent', params:{}})
-}
+  await router.push({ name: "addStudent" });
+};
 
 const toListStudents = async () => {
-  await router.push({name: 'listStudents', params:{}})
-}
+  await router.push({ name: "listStudents" });
+};
+
+const toClassrooms = async () => {
+  await router.push({ name: "classrooms" });
+};
 
 // Determine if we’re on a small device
-const { smAndDown } = useDisplay()
-const isMobile = computed(() => smAndDown.value)
-</script>
+const { smAndDown } = useDisplay();
+const isMobile = computed(() => smAndDown.value);
 
-<style scoped>
-.ml-2 {
-  margin-left: 0.5rem;
+// Handle RFID scan and redirect to StudentInfo page
+async function handleReadRFID() {
+  try {
+    const student_number = await readRFID()
+    if (student_number) {
+      console.log("Scanned student number:", student_number)
+
+      await router.push({
+        name: "studentInfo",
+        params: { student_number },
+      })
+    } else {
+      console.warn("No student_number returned from readRFID")
+    }
+  } catch (err) {
+    console.error("Error reading RFID:", err)
+  }
 }
-.me-2 {
-  margin-right: 0.5rem;
-}
-</style>
+
+
+</script>

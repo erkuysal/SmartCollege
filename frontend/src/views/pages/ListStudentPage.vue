@@ -30,8 +30,9 @@
 
     <!-- The data table -->
     <v-data-table
+      v-if="studentStore.students"
       :headers="headers"
-      :items="students"
+      :items="studentStore.students"
       :items-per-page="5"
       item-key="student_number"
       class="elevation-1"
@@ -84,23 +85,23 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref} from 'vue'
 import { useStudentStore } from '@/utils/stores/studentStore'
 import type { Student } from '@/utils/interfaces/studentInterface'
 
 // Access the student store
 const studentStore = useStudentStore()
 
-// Destructure the store
-const {
-  students,
-  loading,
-  error,
-  rfidMessage,
-  listAllStudents,
-  deleteStudent,
-  writeRFID,
-} = studentStore
+// // Destructure the store
+// const {
+//   students,
+//   loading,
+//   error,
+//   rfidMessage,
+//   listAllStudents,
+//   deleteStudent,
+//   writeRFID,
+// } = studentStore
 
 /**
  * Table headers:
@@ -122,15 +123,17 @@ const headers = ref([
 /**
  * Fetch data when the component mounts
  */
-onMounted(() => {
-  reloadStudents()
+onMounted(async () => {
+  await reloadStudents()
 })
+
+
 
 /**
  * Manually fetch/refresh students
  */
-function reloadStudents() {
-  listAllStudents()
+async function reloadStudents() {
+  await studentStore.listAllStudents()
 }
 
 /**

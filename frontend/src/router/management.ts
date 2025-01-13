@@ -4,6 +4,11 @@ import ManagementLayout from "@/views/layouts/ManagementLayout.vue";
 // Pages
 import AddStudentPage from "@/views/pages/AddStudentPage.vue";
 import ListStudentPage from "@/views/pages/ListStudentPage.vue";
+import StudentInfoPage from "@/views/pages/StudentInfoPage.vue";
+
+
+// Utils
+import {useStudentStore} from "@/utils/stores/studentStore";
 
 const managementRoutes = [
   {
@@ -20,6 +25,12 @@ const managementRoutes = [
         path: '/students',
         name: 'listStudents',
         component: ListStudentPage,
+      },
+      {
+        path: '/students/:student_number',
+        name: 'studentInfo',
+        component: StudentInfoPage,
+        props: true,
       },
     ],
   },

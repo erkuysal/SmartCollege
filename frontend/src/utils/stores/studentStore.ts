@@ -1,156 +1,157 @@
-// src/stores/studentStore.ts
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
 import { StudentService } from '@/utils/services/studentService'
 import type { Student } from '@/utils/interfaces/studentInterface'
 
-export const useStudentStore = defineStore('student', () => {
+export const useStudentStore = defineStore('student', {
   // ========== State ==========
-  const students = ref<Student[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  state: () => ({
+    students: [] as Student[],
+    currentStudent: null as Student | null,
+    loading: false,
+    error: null as string | null,
 
-  // Optional: If you want to store RFID-related messages or status in state
-  const rfidMessage = ref<string | null>(null)
-  const rfidStatus = ref<{ valid?: boolean; error?: string } | null>(null)
-
-  // ========== Actions ==========
-
-  /**
-   * Fetches all students from the server and updates the state.
-   */
-  async function listAllStudents() {
-    loading.value = true
-    error.value = null
-    try {
-      students.value = await StudentService.listStudents()
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Creates a new student on the server and adds it to the store’s state.
-   * @param newStudent - The student data to create
-   */
-  async function addStudent(newStudent: Student) {
-    loading.value = true
-    error.value = null
-    try {
-      const created = await StudentService.addStudent(newStudent)
-      // Update local state to include this new student
-      students.value.push(created)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Updates an existing student on the server, then updates it in the store’s state.
-   * @param studentNumber - The student_number of the student to update
-   * @param updateData - Partial fields to update
-   */
-  async function updateStudent(studentNumber: string, updateData: Partial<Student>) {
-    loading.value = true
-    error.value = null
-    try {
-      const updated = await StudentService.updateStudent(studentNumber, updateData)
-      // Update local state to reflect the changes
-      const index = students.value.findIndex((s) => s.student_number === studentNumber)
-      if (index !== -1) {
-        students.value[index] = updated
-      }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Deletes an existing student on the server, then removes it from the store’s state.
-   * @param studentNumber - The student_number of the student to delete
-   */
-  async function deleteStudent(studentNumber: string) {
-    loading.value = true
-    error.value = null
-    try {
-      await StudentService.deleteStudent(studentNumber)
-      // Update local state to remove this student
-      students.value = students.value.filter((s) => s.student_number !== studentNumber)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Writes RFID data for a specific student.
-   * @param studentNumber - The student_number to associate with the card
-   */
-  async function writeRFID(studentNumber: string) {
-    loading.value = true
-    error.value = null
-    rfidMessage.value = null
-    try {
-      const response = await StudentService.writeRFID(studentNumber)
-      rfidMessage.value = response.message
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Reads RFID data from the card and validates it against the DB.
-   */
-  async function readRFID() {
-    loading.value = true
-    error.value = null
-    rfidMessage.value = null
-    rfidStatus.value = null
-    try {
-      const data = await StudentService.readRFID()
-      // data = { message?: string, valid?: boolean, error?: string }
-      if (data.message) rfidMessage.value = data.message
-      rfidStatus.value = { valid: data.valid, error: data.error }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      loading.value = false
-    }
-  }
+    // RFID-related state
+    rfidMessage: null as string | null,
+    rfidStatus: null as { valid?: boolean; error?: string } | null,
+  }),
 
   // ========== Getters ==========
-  /**
-   * Returns the number of students in the store.
-   */
-  const totalStudents = computed(() => students.value.length)
+  getters: {
+    /**
+     * Returns the number of students in the store.
+     */
+    totalStudents: (state) => state.students.length,
+  },
 
-  // Expose everything this store provides
-  return {
-    // State
-    students,
-    loading,
-    error,
-    rfidMessage,
-    rfidStatus,
+  // ========== Actions ==========
+  actions: {
+    /**
+     * Fetches all students from the server and updates the state.
+     */
+    async listAllStudents() {
+      this.loading = true
+      this.error = null
+      try {
+        this.students = await StudentService.listStudents()
+        console.log('List All Students')
+        console.log(this.students.length)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
 
-    // Actions
-    listAllStudents,
-    addStudent,
-    updateStudent,
-    deleteStudent,
-    writeRFID,
-    readRFID,
+    /**
+     * Fetches details of a specific student by student_number
+     * and updates the currentStudent state.
+     */
+    async fetchStudentByNumber(student_number: string) {
+      this.loading = true
+      this.error = null
+      this.currentStudent = null
+      try {
+        this.currentStudent = await StudentService.getStudent(student_number)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
 
-    // Getters
-    totalStudents,
-  }
+    /**
+     * Creates a new student on the server and adds it to the store’s state.
+     */
+    async addStudent(newStudent: Student) {
+      this.loading = true
+      this.error = null
+      try {
+        const created = await StudentService.addStudent(newStudent)
+        this.students.push(created)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Updates an existing student on the server, then updates it in the store’s state.
+     */
+    async updateStudent(studentNumber: string, updateData: Partial<Student>) {
+      this.loading = true
+      this.error = null
+      try {
+        const updated = await StudentService.updateStudent(studentNumber, updateData)
+        const index = this.students.findIndex((s) => s.student_number === studentNumber)
+        if (index !== -1) {
+          this.students[index] = updated
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Deletes an existing student on the server, then removes it from the store’s state.
+     */
+    async deleteStudent(studentNumber: string) {
+      this.loading = true
+      this.error = null
+      try {
+        await StudentService.deleteStudent(studentNumber)
+        this.students = this.students.filter((s) => s.student_number !== studentNumber)
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Writes RFID data for a specific student.
+     */
+    async writeRFID(studentNumber: string) {
+      this.loading = true
+      this.error = null
+      this.rfidMessage = null
+      try {
+        const response = await StudentService.writeRFID(studentNumber)
+        this.rfidMessage = response.message
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * Reads RFID data from the card and validates it against the DB.
+     */
+    async readRFID(): Promise<string | undefined> {
+      this.loading = true
+      this.error = null
+      this.rfidMessage = null
+      this.rfidStatus = null
+      try {
+        const data = await StudentService.readRFID()
+        console.log('RFID data read: ', data)
+
+        // Example if backend returns something like:
+        // { student_number: "S20250003", message: "RFID read successfully", valid: true }
+        const studentNumber = data.student_number
+
+        if (data.message) this.rfidMessage = data.message
+        this.rfidStatus = { valid: data.valid, error: data.error }
+
+        return studentNumber
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+  },
 })

@@ -34,6 +34,23 @@ export const StudentService = {
   },
 
   /**
+   * Fetches details of a specific student by student_number.
+   * @param student_number - The student number to fetch
+   * @returns A Promise resolving to the Student object
+   */
+  async getStudent(student_number: string): Promise<Student> {
+    try {
+      const response = await dispatch.get<Student>(
+        `${STUDENTS_BASE_URL}${student_number}/`
+      )
+      return response.data
+    } catch (error) {
+      console.error(`Error fetching student ${student_number}:`, error)
+      throw error
+    }
+  },
+
+  /**
    * Update an existing student by student_number.
    * Depending on your Django config, you might need a PUT (full update) or PATCH (partial).
    */
