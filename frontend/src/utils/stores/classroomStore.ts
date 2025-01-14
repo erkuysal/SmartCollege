@@ -1,160 +1,355 @@
-// src/stores/classrooms.js
-import { defineStore } from 'pinia';
+// useCollegeStore.ts
+import { defineStore } from 'pinia'
 
-export const useClassroomsStore = defineStore('classrooms', {
-  // State: Defines the reactive properties of the store
-  state: () => ({
-    classrooms: [
-      { id: 1, name: 'Classroom A', capacity: 30, currentOccupancy: 25, attendanceStarted: false },
-      { id: 2, name: 'Classroom B', capacity: 25, currentOccupancy: 19, attendanceStarted: false },
-      { id: 3, name: 'Classroom C', capacity: 40, currentOccupancy: 40, attendanceStarted: false },
-      { id: 4, name: 'Classroom D', capacity: 35, currentOccupancy: 10, attendanceStarted: false },
-      { id: 5, name: 'Classroom E', capacity: 50, currentOccupancy: 35, attendanceStarted: false },
-    ],
-    attendanceLogs: {
-      1: [
-        { id: 1, timestamp: '2025-01-12 10:00 AM', description: 'Attendance started.' },
-        { id: 2, timestamp: '2025-01-12 10:30 AM', description: '10 students attended.' },
-      ],
-      2: [
-        { id: 1, timestamp: '2025-01-11 09:00 AM', description: 'Attendance not activated.' },
-      ],
-      // Add more logs for other classrooms as needed
-    },
+// Import your renamed service functions
+import {
+  // Classroom
+  getClassrooms,
+  getClassroom,
+  createClassroom,
+  updateClassroom,
+  deleteClassroom,
+
+  // Lesson
+  getLessons,
+  getLesson,
+  createLesson,
+  updateLesson,
+  deleteLesson,
+
+  // Schedule
+  getSchedules,
+  getSchedule,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+
+  // Attendance
+  getAttendances,
+  getAttendance,
+  createAttendance,
+  updateAttendance,
+  deleteAttendance,
+} from '@/utils/services/classroomService'
+
+import type { Attendance, Classroom, Lesson, Schedule } from '@/utils/interfaces/classroomInterface'
+
+/**
+ * Type definition for our store state.
+ */
+interface CollegeState {
+  classrooms: Classroom[]
+  lessons: Lesson[]
+  schedules: Schedule[]
+  attendances: Attendance[]
+
+  isLoading: boolean
+  error: string | null
+}
+
+/**
+ * The main Pinia store for Classroom, Lesson, Schedule, and Attendance.
+ */
+export const useCollegeStore = defineStore('collegeStore', {
+  // STATE
+  state: (): CollegeState => ({
+    classrooms: [],
+    lessons: [],
+    schedules: [],
+    attendances: [],
+
+    isLoading: false,
+    error: null,
   }),
 
-  // Getters: Compute derived state based on store state
+  // GETTERS (Optional - for derived state)
   getters: {
-    // Retrieve all classrooms where attendance has started
-    startedAttendance(state) {
-      return state.classrooms.filter(classroom => classroom.attendanceStarted);
-    },
-
-    // Calculate total occupancy across all classrooms
-    totalOccupancy(state) {
-      return state.classrooms.reduce((total, classroom) => total + classroom.currentOccupancy, 0);
-    },
-
-    // Calculate average occupancy percentage
-    averageOccupancy(state) {
-      const totalCapacity = state.classrooms.reduce((sum, c) => sum + c.capacity, 0);
-      const totalOccupancy = state.classrooms.reduce(
-        (sum, c) => sum + c.currentOccupancy,
-        0
-      );
-      return totalCapacity ? Math.round((totalOccupancy / totalCapacity) * 100) : 0;
-    },
-
-    // Total unused capacity
-    totalUnusedCapacity(state) {
-      return state.classrooms.reduce(
-        (sum, c) => sum + (c.capacity - c.currentOccupancy),
-        0
-      );
-    },
-
-    // Count of high occupancy classrooms (>80%)
-    highOccupancyCount(state) {
-      return state.classrooms.filter(c => (c.currentOccupancy / c.capacity) * 100 > 80).length;
-    },
-
-    // Count of medium occupancy classrooms (50%-80%)
-    mediumOccupancyCount(state) {
-      return state.classrooms.filter(c => {
-        const percentage = (c.currentOccupancy / c.capacity) * 100;
-        return percentage >= 50 && percentage <= 80;
-      }).length;
-    },
-
-    // Count of low occupancy classrooms (<50%)
-    lowOccupancyCount(state) {
-      return state.classrooms.filter(c => (c.currentOccupancy / c.capacity) * 100 < 50).length;
-    },
-
-    // Most utilized classroom
-    mostUtilizedClassroom(state) {
-      if (state.classrooms.length === 0) return 'N/A';
-      return state.classrooms.reduce((max, c) =>
-        (c.currentOccupancy / c.capacity) * 100 > (max.currentOccupancy / max.capacity) * 100 ? c : max
-      ).name;
-    },
-
-    // Least utilized classroom
-    leastUtilizedClassroom(state) {
-      if (state.classrooms.length === 0) return 'N/A';
-      return state.classrooms.reduce((min, c) =>
-        (c.currentOccupancy / c.capacity) * 100 < (min.currentOccupancy / min.capacity) * 100 ? c : min
-      ).name;
-    },
-
-    // Retrieve attendance logs for a specific classroom
-    getAttendanceLogs: (state) => (classroomId) => {
-      return state.attendanceLogs[classroomId] || [];
+    // Example: find a classroom by ID
+    classroomById: (state) => {
+      return (id: number) => state.classrooms.find((c) => c.id === id)
     },
   },
 
-  // Actions: Define methods that can mutate the state or perform asynchronous operations
+  // ACTIONS (CRUD calls + state updates)
   actions: {
     /**
-     * Adds a new classroom to the store.
-     * @param {Object} newClassroom - The classroom object to add.
+     * ------------------------
+     *   CLASSROOM ACTIONS
+     * ------------------------
      */
-    addClassroom(newClassroom) {
-      this.classrooms.push(newClassroom);
+    async fetchClassrooms() {
+      try {
+        this.isLoading = true
+        this.error = null
+        this.classrooms = await getClassrooms()
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
     },
-
-    /**
-     * Updates an existing classroom in the store.
-     * @param {Object} updatedClassroom - The classroom object with updated data.
-     */
-    updateClassroom(updatedClassroom) {
-      const index = this.classrooms.findIndex(c => c.id === updatedClassroom.id);
-      if (index !== -1) {
-        // Ensure reactivity by using Vue's reactivity methods if needed
-        this.classrooms[index] = { ...this.classrooms[index], ...updatedClassroom };
+    async fetchClassroom(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        return await getClassroom(id)
+      } catch (err: any) {
+        this.error = err.message
+        return null
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async addClassroom(payload: Omit<Classroom, 'id'>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const newClassroom = await createClassroom(payload)
+        this.classrooms.push(newClassroom)
+        return newClassroom
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async editClassroom(id: number, payload: Partial<Classroom>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const updated = await updateClassroom(id, payload)
+        const idx = this.classrooms.findIndex((c) => c.id === id)
+        if (idx !== -1) {
+          this.classrooms[idx] = updated
+        }
+        return updated
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async removeClassroom(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        await deleteClassroom(id)
+        this.classrooms = this.classrooms.filter((c) => c.id !== id)
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
       }
     },
 
     /**
-     * Deletes a classroom from the store based on its ID.
-     * @param {number} classroomId - The ID of the classroom to delete.
+     * ------------------------
+     *   LESSON ACTIONS
+     * ------------------------
      */
-    deleteClassroom(classroomId) {
-      this.classrooms = this.classrooms.filter(c => c.id !== classroomId);
-      // Optionally, remove attendance logs as well
-      delete this.attendanceLogs[classroomId];
-    },
-
-    /**
-     * Retrieves a classroom by its ID.
-     * @param {number} id - The ID of the classroom to retrieve.
-     * @returns {Object | undefined} - The classroom object if found, else undefined.
-     */
-    getClassroomById(id) {
-      return this.classrooms.find(c => c.id === id);
-    },
-
-    /**
-     * Adds a new attendance log for a classroom.
-     * @param {number} classroomId - The ID of the classroom.
-     * @param {Object} log - The attendance log object to add.
-     */
-    addAttendanceLog(classroomId, log) {
-      if (!this.attendanceLogs[classroomId]) {
-        this.attendanceLogs[classroomId] = [];
+    async fetchLessons() {
+      try {
+        this.isLoading = true
+        this.error = null
+        this.lessons = await getLessons()
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
       }
-      this.attendanceLogs[classroomId].push(log);
+    },
+    async fetchLesson(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        return await getLesson(id)
+      } catch (err: any) {
+        this.error = err.message
+        return null
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async addLesson(payload: Omit<Lesson, 'id'>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const newLesson = await createLesson(payload)
+        this.lessons.push(newLesson)
+        return newLesson
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async editLesson(id: number, payload: Partial<Lesson>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const updated = await updateLesson(id, payload)
+        const idx = this.lessons.findIndex((l) => l.id === id)
+        if (idx !== -1) {
+          this.lessons[idx] = updated
+        }
+        return updated
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async removeLesson(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        await deleteLesson(id)
+        this.lessons = this.lessons.filter((l) => l.id !== id)
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
     },
 
     /**
-     * Deletes an attendance log from a classroom.
-     * @param {number} classroomId - The ID of the classroom.
-     * @param {number} logId - The ID of the log to delete.
+     * ------------------------
+     *   SCHEDULE ACTIONS
+     * ------------------------
      */
-    deleteAttendanceLog(classroomId, logId) {
-      if (this.attendanceLogs[classroomId]) {
-        this.attendanceLogs[classroomId] = this.attendanceLogs[classroomId].filter(log => log.id !== logId);
+    async fetchSchedules() {
+      try {
+        this.isLoading = true
+        this.error = null
+        this.schedules = await getSchedules()
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async fetchSchedule(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        return await getSchedule(id)
+      } catch (err: any) {
+        this.error = err.message
+        return null
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async addSchedule(payload: Omit<Schedule, 'id'>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const newSchedule = await createSchedule(payload)
+        this.schedules.push(newSchedule)
+        return newSchedule
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async editSchedule(id: number, payload: Partial<Schedule>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const updated = await updateSchedule(id, payload)
+        const idx = this.schedules.findIndex((s) => s.id === id)
+        if (idx !== -1) {
+          this.schedules[idx] = updated
+        }
+        return updated
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async removeSchedule(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        await deleteSchedule(id)
+        this.schedules = this.schedules.filter((s) => s.id !== id)
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * ------------------------
+     *   ATTENDANCE ACTIONS
+     * ------------------------
+     */
+    async fetchAttendances() {
+      try {
+        this.isLoading = true
+        this.error = null
+        this.attendances = await getAttendances()
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async fetchAttendance(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        return await getAttendance(id)
+      } catch (err: any) {
+        this.error = err.message
+        return null
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async addAttendance(payload: Omit<Attendance, 'id'>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const newRecord = await createAttendance(payload)
+        this.attendances.push(newRecord)
+        return newRecord
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async editAttendance(id: number, payload: Partial<Attendance>) {
+      try {
+        this.isLoading = true
+        this.error = null
+        const updated = await updateAttendance(id, payload)
+        const idx = this.attendances.findIndex((a) => a.id === id)
+        if (idx !== -1) {
+          this.attendances[idx] = updated
+        }
+        return updated
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async removeAttendance(id: number) {
+      try {
+        this.isLoading = true
+        this.error = null
+        await deleteAttendance(id)
+        this.attendances = this.attendances.filter((a) => a.id !== id)
+      } catch (err: any) {
+        this.error = err.message
+      } finally {
+        this.isLoading = false
       }
     },
   },
-});
+})
