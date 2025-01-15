@@ -119,7 +119,7 @@ const userName = ref('John Smith')
 const userRole = ref('Administrator')
 
 // Page Title + Subtitle
-const pageTitle = ref('College Admin Dashboard')
+const pageTitle = ref('Admin Dashboard')
 
 // Navigation items for the left sidebar
 const navItems = [
