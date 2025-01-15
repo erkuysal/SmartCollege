@@ -62,7 +62,10 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { useStudentStore } from '@/utils/stores/studentStore'
+import { useRouter } from 'vue-router'
 import type { Student } from '@/utils/interfaces/studentInterface'
+
+const router = useRouter()
 
 /**
  * Pinia store reference
@@ -91,6 +94,8 @@ async function onSubmit() {
       last_name: '',
       email: '',
     }
+
+    await router.push({ name: 'students' });
   } catch (error) {
     // The store action already sets store.error.
     // Additional handling (e.g., global toast) can go here if needed.

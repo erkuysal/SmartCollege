@@ -2,13 +2,14 @@
 import ManagementLayout from "@/views/layouts/ManagementLayout.vue";
 
 // Pages
-import AddStudentPage from "@/views/pages/AddStudentPage.vue";
-import ListStudentPage from "@/views/pages/ListStudentPage.vue";
-import StudentInfoPage from "@/views/pages/StudentInfoPage.vue";
+import AddStudentPage from "@/views/pages/depot/AddStudentPage.vue";
+import ListStudentPage from "@/views/pages/depot/ListStudentPage.vue";
+import StudentInfoPage from "@/views/pages/depot/StudentInfoPage.vue";
 
 
 // Utils
 import {useStudentStore} from "@/utils/stores/studentStore";
+import development from "@/views/development.vue";
 
 const managementRoutes = [
   {
@@ -33,6 +34,12 @@ const managementRoutes = [
         props: true,
       },
     ],
+  },
+
+  {
+    path: '/development',
+    name: 'development',
+    component: development,
   },
 ]
 

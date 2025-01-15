@@ -133,7 +133,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useClassroomsStore } from "@/utils/stores/classroomStore";
+import { useClassroomsStore } from "@/utils/stores/classroomStore.ts";
 
 // Initialize Router and Store
 const route = useRoute();

@@ -22,26 +22,26 @@
 
       <v-divider class="my-2"></v-divider>
 
-      <!-- Navigation List -->
-      <v-list nav density="comfortable">
-        <v-list-item-group
-          color="secondary"
-          :value="selectedNav"
+      <v-list
+        lines="one"
+        density="comfortable"
+        select-strategy="single"
+        v-model:selected="selectedIndex"
+        class="sidebar-nav flex-grow-1"
+      >
+        <v-list-item
+          v-for="(item, i) in navItems"
+          :key="i"
+          :value="i"
+        class="sidebar-item"
+        @click="navigateTo(i)"
         >
-          <v-list-item
-            v-for="(item, index) in navItems"
-            :key="index"
-            @click="handleNavClick(index, item.route)"
-          >
-            <v-list-item-icon>
-              <!-- Color icon differently if selected vs. not selected -->
-              <v-icon :color="selectedNav === index ? 'secondary' : 'white'">
-                {{ item.icon }}
-              </v-icon>
-            </v-list-item-icon>
-            <v-list-item-title>{{ item.title }}</v-list-item-title>
-          </v-list-item>
-        </v-list-item-group>
+        <!-- Icon + Title on the same line, horizontally -->
+        <div class="d-flex align-center" style="gap: 8px;">
+          <v-icon>{{ item.icon }}</v-icon>
+          <span>{{ item.title }}</span>
+        </div>
+        </v-list-item>
       </v-list>
 
       <v-spacer />
@@ -83,24 +83,10 @@
     <!-- Main Content -->
     <v-main>
       <v-container fluid class="py-4 px-4">
-        <div class="d-flex align-center justify-space-between mb-4">
-          <div>
-            <h2 class="text-h5 mb-1">{{ pageTitle }}</h2>
-            <p class="text-caption text-secondary">{{ pageSubtitle }}</p>
-          </div>
-          <!-- Example button in the header -->
-          <v-btn color="primary" variant="tonal" @click="onCreateCourse">
-            <v-icon left>mdi-plus</v-icon>
-            Add Course
-          </v-btn>
-        </div>
-
-        <!-- Where your page content goes -->
-        <slot />
+        <router-view />
       </v-container>
     </v-main>
 
-    <!-- Footer (Optional) -->
     <v-footer
       class="college-dark text-center px-4"
       height="40"
@@ -114,19 +100,11 @@
 </template>
 
 <script setup lang="ts">
-/**
- * EXPLANATION:
- *  - We've added a new "handleReadRFID" method to handle scanning from the top bar.
- *  - We also use 'useDisplay' from Vuetify to detect mobile screens, so the drawer
- *    can be temporary or permanent automatically.
- *  - If you don't need that, you can remove the isMobile logic and use a fixed drawer.
- */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 
-// OPTIONAL: If you have an RFID or Student store
-// import { useStudentStore } from '@/utils/stores/studentStore'
+import {useStudentStore} from "@/utils/stores/studentStore";
 
 // Drawer / Sidebar State
 const drawerOpen = ref(true)
@@ -142,17 +120,16 @@ const userRole = ref('Administrator')
 
 // Page Title + Subtitle
 const pageTitle = ref('College Admin Dashboard')
-const pageSubtitle = ref('Manage your college data with ease.')
 
 // Navigation items for the left sidebar
 const navItems = [
-  { title: 'Students',    icon: 'mdi-account-multiple',   route: '/students' },
-  { title: 'Staff',       icon: 'mdi-account-group',      route: '/staff' },
-  { title: 'Courses',     icon: 'mdi-book-open-variant',  route: '/courses' },
-  { title: 'Classrooms',  icon: 'mdi-city-variant-outline', route: '/classrooms' },
-  { title: 'Departments', icon: 'mdi-office-building',    route: '/departments' },
-  { title: 'Tasks',       icon: 'mdi-clipboard-text',     route: '/tasks' },
-  { title: 'Events',      icon: 'mdi-calendar-outline',   route: '/events' },
+  { title: 'Students',    icon: 'mdi-account-multiple',   route: '/admin/students' },
+  { title: 'Staff',       icon: 'mdi-account-group',      route: '/admin/staff' },
+  { title: 'Courses',     icon: 'mdi-book-open-variant',  route: '/admin/courses' },
+  { title: 'Classrooms',  icon: 'mdi-city-variant-outline', route: '/admin/classrooms' },
+  { title: 'Departments', icon: 'mdi-office-building',    route: '/admin/departments' },
+  { title: 'Tasks',       icon: 'mdi-clipboard-text',     route: '/admin/tasks' },
+  { title: 'Events',      icon: 'mdi-calendar-outline',   route: '/admin/events' },
 ]
 
 // Track which nav item is selected
@@ -172,9 +149,8 @@ function onCreateCourse() {
 }
 
 // Handling nav click -> update selected + route
-function handleNavClick(index: number, routePath: string) {
-  selectedNav.value = index
-  router.push(routePath)
+function navigateTo(i: number) {
+  router.push(navItems[i].route)
 }
 
 /**
@@ -183,24 +159,24 @@ function handleNavClick(index: number, routePath: string) {
  *   then navigate to, for example, a Student Info page.
  */
 // If you have a store, uncomment and adapt:
-// const studentStore = useStudentStore()
-// const { readRFID } = studentStore
+const studentStore = useStudentStore()
+const { readRFID } = studentStore
 
 async function handleReadRFID() {
   try {
-    // Example of calling an RFID method from store
-    // const student_number = await readRFID()
-    // if (student_number) {
-    //   router.push({ name: 'studentInfo', params: { student_number } })
-    // } else {
-    //   console.warn('No student_number returned')
-    // }
+    const student_number = await readRFID()
+    if (student_number) {
+      console.log("Scanned student number:", student_number)
 
-    // For now, just a placeholder:
-    console.log('Read RFID clicked...')
-    // Route to some page if needed
+      await router.push({
+        name: "studentInfo",
+        params: { student_number },
+      })
+    } else {
+      console.warn("No student_number returned from readRFID")
+    }
   } catch (err) {
-    console.error('Error reading RFID:', err)
+    console.error("Error reading RFID:", err)
   }
 }
 </script>

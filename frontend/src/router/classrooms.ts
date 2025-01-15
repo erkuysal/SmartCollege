@@ -1,6 +1,5 @@
-import ClassroomsPage from "@/views/pages/ClassroomsPage.vue";
-import ClassroomDetailPage from "@/views/pages/ClassroomDetailPage.vue";
-import development from "@/views/development.vue";
+import ClassroomsPage from "@/views/pages/depot/ClassroomsPage.vue";
+import ClassroomDetailPage from "@/views/pages/depot/ClassroomDetailPage.vue";
 
 const classroomRoutes = [
   {
@@ -13,11 +12,6 @@ const classroomRoutes = [
     name: 'ClassroomDetail',
     component: ClassroomDetailPage,
     props: true,
-  },
-  {
-    path: '/development',
-    name: 'development',
-    component: development,
   },
 ]
 

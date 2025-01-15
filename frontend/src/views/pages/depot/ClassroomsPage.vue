@@ -314,7 +314,7 @@
 import {ref, computed, onMounted, watch} from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import { useClassroomsStore } from '@/utils/stores/classroomStore';
+import { useClassroomsStore } from '@/utils/stores/classroomStore.ts';
 import Chart from 'chart.js/auto';
 
 // Initialize Router
