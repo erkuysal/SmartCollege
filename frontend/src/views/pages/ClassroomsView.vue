@@ -9,6 +9,14 @@
 
         <v-spacer></v-spacer>
 
+        <!-- View Toggle Button -->
+        <v-btn color="primary" variant="tonal" @click="toggleViewMode">
+          <v-icon left>
+            {{ viewMode === 'table' ? 'mdi-view-grid' : 'mdi-table' }}
+          </v-icon>
+          Switch to {{ viewMode === 'table' ? 'Card' : 'Table' }} View
+        </v-btn>
+
         <v-btn color="primary" @click="openAddClassroomDialog">
           <v-icon>mdi-plus</v-icon>
           Add Classroom
@@ -20,7 +28,8 @@
         </v-btn>
       </v-toolbar>
 
-      <v-card>
+      <!-- Table View -->
+      <v-card v-if="viewMode === 'table'">
         <v-card-text>
           <!-- Error Alert -->
           <v-alert
@@ -81,6 +90,43 @@
         </v-card-text>
       </v-card>
 
+      <!-- Card View -->
+      <v-row v-if="viewMode === 'card'" class="mt-4">
+        <v-col
+          v-for="classroom in classrooms"
+          :key="classroom.id"
+          cols="12"
+          sm="6"
+          md="4"
+          lg="3"
+        >
+          <v-card elevation="2" class="mb-4 d-flex flex-column">
+            <v-card-title class="text-h6 d-flex justify-space-between">
+              {{ classroom.name }}
+              <v-btn icon small @click="editClassroom(classroom)">
+                <v-icon color="primary">mdi-pencil</v-icon>
+              </v-btn>
+            </v-card-title>
+            <v-card-subtitle>
+              Capacity: {{ classroom.capacity }}
+            </v-card-subtitle>
+            <v-card-text>
+              <div>
+                Current Occupancy: {{ classroom.currentOccupancy }}/{{ classroom.capacity }}
+              </div>
+            </v-card-text>
+
+            <v-card-actions class="mx-auto">
+              <v-btn color="info" variant="text" @click="toClassroomDetails(classroom.id)">
+                <v-icon left>mdi-information</v-icon>
+                DETAILS
+              </v-btn>
+            </v-card-actions>
+
+          </v-card>
+        </v-col>
+      </v-row>
+
       <!-- Add Classroom Modal -->
       <v-dialog v-model="addDialogVisible" max-width="600">
         <v-card>
@@ -120,7 +166,6 @@
 
     <!-- Child Route View -->
     <router-view v-else />
-
   </v-container>
 </template>
 
@@ -148,7 +193,16 @@ const headers = ref([
 ]);
 
 // Child route names
-const childRouteNames = ['createClassroom', 'editClassroom'];
+const childRouteNames = ['classroomDetails'];
+
+function toClassroomDetails(classroomId: number) {
+  if (!classroomId) {
+    console.error('Classroom ID is required to navigate to details.');
+    return;
+  }
+
+  router.push({ name: 'classroomDetails', params: { id: classroomId } });
+}
 
 // Determine if the current route is a child route
 const isChildRoute = ref(false);
@@ -170,6 +224,10 @@ onMounted(async () => {
 // Methods
 async function reloadClassrooms() {
   await collegeStore.fetchClassrooms();
+}
+
+function toggleViewMode() {
+  viewMode.value = viewMode.value === 'table' ? 'card' : 'table';
 }
 
 function openAddClassroomDialog() {
@@ -215,8 +273,9 @@ const formValid = ref(false);
 const formData = ref({
   name: '',
   capacity: null,
-  currentOccupancy: 0,
 });
+
+const viewMode = ref('card');
 </script>
 
 <style scoped>

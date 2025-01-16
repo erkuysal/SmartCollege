@@ -1,7 +1,7 @@
 // Layout
 import DashboardLayout from "@/views/layouts/DashboardLayout.vue";
 
-// Child Pages
+// Parent Pages
 import DashboardView from '@/views/pages/DashboardView.vue'
 import StudentsView from '@/views/pages/StudentsView.vue'
 import StaffView from '@/views/pages/StaffView.vue'
@@ -10,7 +10,13 @@ import ClassroomsView from '@/views/pages/ClassroomsView.vue'
 import DepartmentsView from '@/views/pages/DepartmentsView.vue'
 import TasksView from '@/views/pages/TasksView.vue'
 import EventsView from '@/views/pages/EventsView.vue'
+
+// --------- Child Pages -----
+// -- Actions --
 import AddStudent from "@/views/pages/actions/AddStudent.vue";
+
+// -- Details --
+import ClassroomDetails from "@/views/pages/details/ClassroomDetails.vue";
 
 
 // Optional: If you have a login or public pages, import them here
@@ -55,6 +61,14 @@ const dashboardRoutes = [
         path: 'classrooms',
         name: 'classrooms',
         component: ClassroomsView,
+        children: [
+          {
+            path: ':id',
+            name: 'classroomDetails',
+            component: ClassroomDetails,
+            props: true,
+          },
+        ],
       },
       {
         path: 'departments',
