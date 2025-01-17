@@ -6,7 +6,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # Your app’s urls
-    path('api/students/', include('users.urls')),
+    path('api/users/', include('users.urls')),
+    path('api/classes/', include('classes.urls')),
 
     # drf-spectacular schema and UIs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

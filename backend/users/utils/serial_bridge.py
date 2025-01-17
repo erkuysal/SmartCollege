@@ -5,6 +5,7 @@ ARDUINO_PORT = "/dev/cu.usbserial-1140"  # Adjust for your environment
 BAUD_RATE = 9600
 TIMEOUT = 3  # Increase if needed (in seconds)
 
+
 def send_to_arduino_write(data_to_write):
     """
     Sends 'WRITE:<data>' to the Arduino and loops until
@@ -49,7 +50,7 @@ def read_from_arduino():
     Sends 'READ' to Arduino and expects:
       - 'DATA:<some_string>' or
       - 'READ_FAIL'
-    Filters out debug/logging lines from the Arduino and returns the relevant response.
+    Returns {"data": "..."} or {"error": "..."} accordingly.
     """
     print(f"[DEBUG] Connecting to {ARDUINO_PORT} at {BAUD_RATE} baud...")
     try:
@@ -69,8 +70,10 @@ def read_from_arduino():
                 print(f"[DEBUG] Line from Arduino: {response}")
 
                 # Check for valid responses
-                if response.startswith("DATA:"):
-                    card_data = response[5:]  # Extract data after "DATA:"
+                if response.startswith("[INFO] Data in block"):
+                    # Extract the student number
+                    card_data = response.split(":")[1].strip()
+                    print(f"[DEBUG] Extracted card data: {card_data}")
                     return {"data": card_data}
                 elif response == "READ_FAIL":
                     return {"error": "Arduino reported READ_FAIL."}

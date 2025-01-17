@@ -130,21 +130,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-
-interface ClassSession {
-  id: string;
-  day: string;
-  time: string;
-  courseId: string;
-  courseName: string;
-  teacherId: string;
-  teacher: string;
-}
+import { useCollegeStore } from '@/utils/stores/collegeStore';
+import { useTeacherStore } from '@/utils/stores/teacherStore';
+import type { ClassSession } from '@/utils/interfaces/collegeInterface';
 
 const route = useRoute();
-const classroomId = route.params.id;
+const classroomId = Number(route.params.id);
+const collegeStore = useCollegeStore();
+const teacherStore = useTeacherStore();
+
+// Initialize data
+onMounted(async () => {
+  await Promise.all([
+    collegeStore.fetchCourses(),
+    teacherStore.fetchTeachers(),
+    fetchClassSessions()
+  ]);
+});
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -160,6 +164,10 @@ function generateTimeSlots() {
 }
 
 const timeSlots = generateTimeSlots();
+
+// Computed properties for courses and teachers
+const courses = computed(() => collegeStore.courses);
+const teachers = computed(() => teacherStore.teachers);
 
 // Only show full time for hour marks
 function shouldShowFullTime(time: string): boolean {
@@ -182,34 +190,24 @@ function formatTimeForDisplay(time: string): string {
   return `${displayHours}:${minutes} ${period}`;
 }
 
-const classSessions = ref<ClassSession[]>([
-  {
-    id: '1',
-    day: 'Monday',
-    time: '09:00',
-    courseId: '101',
-    courseName: 'Mathematics',
-    teacherId: 't1',
-    teacher: 'John Doe'
-  },
-]);
-
+// UI state
 const isDragMode = ref(false);
 const draggedEvent = ref<ClassSession | null>(null);
 const dialog = ref(false);
 const selectedDay = ref('');
 const selectedTime = ref('');
-const selectedCourse = ref(null);
-const selectedTeacher = ref(null);
+const selectedCourse = ref<number | null>(null);
+const selectedTeacher = ref<number | null>(null);
 const editingSession = ref<ClassSession | null>(null);
 const isFormValid = ref(false);
+const classSessions = ref<ClassSession[]>([]);
 
 function formatDay(day: string): string {
-  return day.slice(0, 3)
+  return day.slice(0, 3);
 }
 
 function isWeekend(day: string): boolean {
-  return day === 'Saturday' || day === 'Sunday'
+  return day === 'Saturday' || day === 'Sunday';
 }
 
 function getClassSession(day: string, time: string) {
@@ -248,16 +246,21 @@ function isDragging(session: ClassSession | null): boolean {
 }
 
 async function saveClassSession() {
-  if (!isFormValid.value) return;
+  if (!isFormValid.value || !selectedCourse.value || !selectedTeacher.value) return;
+
+  const course = collegeStore.getCourseById(selectedCourse.value);
+  const teacher = teacherStore.teacherById(selectedTeacher.value);
+
+  if (!course || !teacher) return;
 
   const newSession: ClassSession = {
-    id: crypto.randomUUID(), // Generate unique ID
+    id: crypto.randomUUID(),
     day: selectedDay.value,
     time: selectedTime.value,
     courseId: selectedCourse.value,
-    courseName: courses.find(c => c.id === selectedCourse.value)?.name || '',
+    courseName: course.title,
     teacherId: selectedTeacher.value,
-    teacher: teachers.find(t => t.id === selectedTeacher.value)?.name || '',
+    teacher: `${teacher.first_name} ${teacher.last_name}`,
   };
 
   if (editingSession.value) {
@@ -275,7 +278,11 @@ async function saveClassSession() {
 }
 
 async function refreshSchedule() {
-  // Implement refresh logic
+  await Promise.all([
+    collegeStore.fetchCourses(),
+    teacherStore.fetchTeachers(),
+    fetchClassSessions()
+  ]);
 }
 
 function isOddHour(time: string): boolean {
@@ -320,18 +327,25 @@ function handleDragEnd() {
   draggedEvent.value = null;
 }
 
-// Sample data for courses and teachers (replace with your actual data)
-const courses = [
-  { id: '1', name: 'Mathematics' },
-  { id: '2', name: 'Physics' },
-  { id: '3', name: 'Chemistry' },
-];
-
-const teachers = [
-  { id: '1', name: 'John Doe' },
-  { id: '2', name: 'Jane Smith' },
-  { id: '3', name: 'Robert Johnson' },
-];
+const fetchClassSessions = async () => {
+  try {
+    // Assuming you have a method in collegeStore to fetch sessions for a specific classroom
+    const sessions = await collegeStore.getSchedulesByClassroom(classroomId);
+    classSessions.value = sessions.map(schedule => ({
+      id: schedule.id.toString(),
+      day: days[schedule.day_of_week],
+      time: schedule.start_time,
+      courseId: schedule.course,
+      courseName: collegeStore.getCourseName(schedule.course),
+      teacherId: collegeStore.getCourseById(schedule.course)?.teacher || 0,
+      teacher: teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)
+        ? `${teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)?.first_name} ${teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)?.last_name}`
+        : 'Unknown Teacher',
+    }));
+  } catch (error) {
+    console.error('Error fetching class sessions:', error);
+  }
+};
 </script>
 
 <style scoped lang="scss">

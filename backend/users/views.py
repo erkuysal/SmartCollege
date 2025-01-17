@@ -3,8 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-from .models import Student
-from .serializers import StudentSerializer
+from .models import Student, Teacher
+from .serializers import StudentSerializer, TeacherSerializer
 
 # Import our Arduino helper functions
 from .utils.serial_bridge import send_to_arduino_write, read_from_arduino
@@ -56,7 +56,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     def read_rfid(self, request):
         """
         GET /students/card/read/
-        Reads data from the RFID card (via Arduino) and validates against the DB.
+        Reads the student number from the RFID card (via Arduino) and retrieves student details.
         """
         # Ask Arduino to read the card
         arduino_response = read_from_arduino()
@@ -67,35 +67,32 @@ class StudentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Extract the card data returned by Arduino (e.g. "12345,John,Doe")
-        card_data = arduino_response.get("data")
-        if not card_data:
+        # Extract the student number returned by Arduino
+        student_number = arduino_response.get("data")
+        if not student_number:
             return Response(
-                {"error": "No data read from the RFID card. Ensure the card is present and try again."},
+                {"error": "No student number read from the RFID card. Ensure the card is present and try again."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Validate the format "student_number,first_name,last_name"
-        parts = card_data.split(",")
-        if len(parts) != 3:
-            return Response(
-                {"error": "Invalid card data format. Expected: student_number,first_name,last_name."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        student_number, first_name, last_name = parts
 
         # Attempt to locate a matching student in the DB
-        student = get_object_or_404(Student, student_number=student_number)
+        try:
+            student = get_object_or_404(Student, student_number=student_number)
+        except Exception as e:
+            return Response(
+                {"error": f"Student not found for number: {student_number}."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-        # Compare first/last names
-        if student.first_name == first_name and student.last_name == last_name:
-            return Response(
-                {"message": "Card data validated successfully.", "valid": True},
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                {"message": "Card data does not match.", "valid": False},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Serialize the student details and return them
+        serializer = StudentSerializer(student)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TeacherViewSet(viewsets.ModelViewSet):
+    """
+    A ViewSet to handle CRUD operations for teachers
+    """
+    queryset = Teacher.objects.all()
+    serializer_class = TeacherSerializer
+

@@ -11,6 +11,10 @@
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@fullcalendar/vue3": "^6.1.15",
     "@mdi/font": "7.4.47",
     "@vueuse/core": "^12.4.0",
     "axios": "^1.7.9",

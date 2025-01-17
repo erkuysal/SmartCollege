@@ -1,7 +1,8 @@
 import dispatch from "@/utils/dispatcher";
 import type { Student } from "@/utils/interfaces/studentInterface";
+import { API_ROUTES } from "@/utils/config/apiRoutes";
 
-const STUDENTS_BASE_URL = "students/";
+const { USERS_BASE_URL, STUDENTS_ROUTE } = API_ROUTES;
 
 export const StudentService = {
   /**
@@ -11,7 +12,7 @@ export const StudentService = {
    */
   async addStudent(newStudent: Student): Promise<Student> {
     try {
-      const response = await dispatch.post<Student>(`${STUDENTS_BASE_URL}`, newStudent);
+      const response = await dispatch.post<Student>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}/`, newStudent);
       return response.data;
     } catch (error) {
       console.error("Error creating student:", error);
@@ -25,7 +26,7 @@ export const StudentService = {
    */
   async listStudents(): Promise<Student[]> {
     try {
-      const response = await dispatch.get<Student[]>(`${STUDENTS_BASE_URL}`);
+      const response = await dispatch.get<Student[]>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -41,7 +42,7 @@ export const StudentService = {
   async getStudent(student_number: string): Promise<Student> {
     try {
       const response = await dispatch.get<Student>(
-        `${STUDENTS_BASE_URL}${student_number}/`
+        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${student_number}/`
       )
       return response.data
     } catch (error) {
@@ -60,7 +61,7 @@ export const StudentService = {
   ): Promise<Student> {
     try {
       const response = await dispatch.patch<Student>(
-        `${STUDENTS_BASE_URL}${studentNumber}/`,
+        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/`,
         updateData
       );
       return response.data;
@@ -75,7 +76,7 @@ export const StudentService = {
    */
   async deleteStudent(studentNumber: string): Promise<void> {
     try {
-      await dispatch.delete(`${STUDENTS_BASE_URL}${studentNumber}/`);
+      await dispatch.delete(`${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/`);
     } catch (error) {
       console.error(`Error deleting student ${studentNumber}:`, error);
       throw error;
@@ -89,7 +90,7 @@ export const StudentService = {
   async writeRFID(studentNumber: string): Promise<{ message: string }> {
     try {
       const response = await dispatch.post<{ message: string }>(
-        `${STUDENTS_BASE_URL}${studentNumber}/card/write/`
+        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/card/write/`
       );
       return response.data;
     } catch (error) {
@@ -108,7 +109,7 @@ export const StudentService = {
     error?: string;
   }> {
     try {
-      const response = await dispatch.get(`${STUDENTS_BASE_URL}card/read/`);
+      const response = await dispatch.get(`${USERS_BASE_URL}/${STUDENTS_ROUTE}card/read/`);
       return response.data;
     } catch (error) {
       console.error("Error reading RFID from card:", error);

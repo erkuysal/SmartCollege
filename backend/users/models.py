@@ -3,6 +3,7 @@ from datetime import datetime
 
 
 class Student(models.Model):
+
     first_name = models.CharField(max_length=50, blank=True)
     last_name = models.CharField(max_length=50, blank=True)
     email = models.EmailField(unique=True, blank=True, null=True)
@@ -31,6 +32,17 @@ class Student(models.Model):
             self.student_number = f"S{year}{str(next_number).zfill(4)}"
 
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+
+class Teacher(models.Model):
+    first_name = models.CharField(max_length=50, blank=True)
+    last_name = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
+
+    # rfid_tag = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

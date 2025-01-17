@@ -33,19 +33,15 @@
           v-for="(item, i) in navItems"
           :key="i"
           :value="i"
-        class="sidebar-item"
-        @click="navigateTo(i)"
+          class="sidebar-item"
+          @click="navigateTo(i)"
         >
-        <!-- Icon + Title on the same line, horizontally -->
-        <div class="d-flex align-center" style="gap: 8px;">
-          <v-icon>{{ item.icon }}</v-icon>
-          <span>{{ item.title }}</span>
-        </div>
+          <div class="d-flex align-center" style="gap: 8px;">
+            <v-icon>{{ item.icon }}</v-icon>
+            <span>{{ item.title }}</span>
+          </div>
         </v-list-item>
       </v-list>
-
-      <v-spacer />
-      <!-- No bottom button in this version -->
     </v-navigation-drawer>
 
     <!-- Top App Bar -->
@@ -68,7 +64,6 @@
         <v-icon>mdi-credit-card-scan</v-icon>
       </v-btn>
 
-      <!-- Example icons: Search, Notifications, Settings -->
       <v-btn icon>
         <v-icon>mdi-magnify</v-icon>
       </v-btn>
@@ -82,9 +77,7 @@
 
     <!-- Main Content -->
     <v-main>
-      <v-container fluid class="py-4 px-4">
-        <router-view />
-      </v-container>
+      <router-view />
     </v-main>
 
     <v-footer
@@ -93,116 +86,117 @@
       app
     >
       <span class="text-white text-caption mx-auto">
-        © 2023 MyCollege. All rights reserved.
+        © {{ new Date().getFullYear() }} MyCollege. All rights reserved.
       </span>
     </v-footer>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useDisplay } from 'vuetify'
+import { ref, computed, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useDisplay } from 'vuetify';
+import { useStudentStore } from "@/utils/stores/studentStore";
+import { useTeacherStore } from "@/utils/stores/teacherStore";
+import { useCollegeStore } from "@/utils/stores/collegeStore";
 
-import {useStudentStore} from "@/utils/stores/studentStore";
-
-// Drawer / Sidebar State
-const drawerOpen = ref(true)
-const drawerWidth = 260
-
-// Mobile detection (optional)
-const { smAndDown } = useDisplay()
-const isMobile = computed(() => smAndDown.value)
-
-// Example user info
-const userName = ref('John Smith')
-const userRole = ref('Administrator')
-
-// Page Title + Subtitle
-const pageTitle = ref('Admin Dashboard')
-
-// Navigation items for the left sidebar
-const navItems = [
-  { title: 'Students',    icon: 'mdi-account-multiple',   route: '/admin/students' },
-  { title: 'Staff',       icon: 'mdi-account-group',      route: '/admin/staff' },
-  { title: 'Courses',     icon: 'mdi-book-open-variant',  route: '/admin/courses' },
-  { title: 'Classrooms',  icon: 'mdi-city-variant-outline', route: '/admin/classrooms' },
-  { title: 'Departments', icon: 'mdi-office-building',    route: '/admin/departments' },
-  { title: 'Tasks',       icon: 'mdi-clipboard-text',     route: '/admin/tasks' },
-  { title: 'Events',      icon: 'mdi-calendar-outline',   route: '/admin/events' },
-]
-
-// Track which nav item is selected
-const selectedNav = ref(0)
+// Store instances
+const studentStore = useStudentStore();
+const teacherStore = useTeacherStore();
+const collegeStore = useCollegeStore();
 
 // Router
-const router = useRouter()
+const router = useRouter();
+const route = useRoute();
 
-// Toggle the drawer
+// Drawer state
+const drawerOpen = ref(true);
+const drawerWidth = 260;
+const selectedIndex = ref(0);
+
+// Mobile detection
+const { smAndDown } = useDisplay();
+const isMobile = computed(() => smAndDown.value);
+
+// User info (should come from auth store in real app)
+const userName = ref('John Smith');
+const userRole = ref('Administrator');
+
+// Navigation items
+const navItems = [
+  { title: 'Dashboard',   icon: 'mdi-view-dashboard',     route: '/admin/dashboard' },
+  { title: 'Students',    icon: 'mdi-account-multiple',   route: '/admin/students' },
+  { title: 'Staff',       icon: 'mdi-account-tie',        route: '/admin/staff' },
+  { title: 'Courses',     icon: 'mdi-book-education',     route: '/admin/courses' },
+  { title: 'Classrooms',  icon: 'mdi-door-closed',        route: '/admin/classrooms' },
+  { title: 'Schedules',   icon: 'mdi-calendar-clock',     route: '/admin/schedules' },
+  { title: 'Attendance',  icon: 'mdi-clipboard-check',    route: '/admin/attendance' },
+];
+
+// Computed page title based on current route
+const pageTitle = computed(() => {
+  const currentRoute = route.path;
+  const currentNav = navItems.find(item => item.route === currentRoute);
+  return currentNav?.title || 'Dashboard';
+});
+
+// Methods
 function toggleDrawer() {
-  drawerOpen.value = !drawerOpen.value
+  drawerOpen.value = !drawerOpen.value;
 }
 
-// On create course click (example)
-function onCreateCourse() {
-  console.log('Add Course clicked')
-}
-
-// Handling nav click -> update selected + route
 function navigateTo(i: number) {
-  router.push(navItems[i].route)
+  router.push(navItems[i].route);
 }
-
-/**
- * handleReadRFID:
- *   If you have a store function that reads an RFID, call it here,
- *   then navigate to, for example, a Student Info page.
- */
-// If you have a store, uncomment and adapt:
-const studentStore = useStudentStore()
-const { readRFID } = studentStore
 
 async function handleReadRFID() {
   try {
-    const student_number = await readRFID()
+    const student_number = await studentStore.readRFID();
     if (student_number) {
-      console.log("Scanned student number:", student_number)
-
+      console.log("Scanned student number:", student_number);
       await router.push({
         name: "studentInfo",
         params: { student_number },
-      })
-    } else {
-      console.warn("No student_number returned from readRFID")
+      });
     }
   } catch (err) {
-    console.error("Error reading RFID:", err)
+    console.error("Error reading RFID:", err);
   }
 }
+
+// Initial data loading
+onMounted(async () => {
+  try {
+    await Promise.all([
+      collegeStore.fetchClassrooms(),
+      collegeStore.fetchCourses(),
+      collegeStore.fetchSchedules(),
+      teacherStore.fetchTeachers(),
+      studentStore.listAllStudents()
+    ]);
+  } catch (error) {
+    console.error('Error loading initial data:', error);
+  }
+});
 </script>
 
 <style scoped>
-/* Dark background for sidebar */
 .college-dark {
   background-color: #25303B !important;
 }
 
-/* Make list item text white by default */
 .v-list-item-title {
   color: #fff;
 }
 
-/* Provide a bit more visible highlight when an item is selected */
 .v-list-item--active {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Adjust the color of icons in the sidebar */
 .v-list-item--active .v-icon {
   color: #fff !important;
 }
 
-/* Example: override text for user role or small text in the drawer */
 .text-grey-lighten-3 {
   color: rgba(255, 255, 255, 0.6) !important;
 }
