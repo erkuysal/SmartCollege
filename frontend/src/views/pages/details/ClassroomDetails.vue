@@ -7,7 +7,24 @@
           Weekly Schedule
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon size="small" @click="() => collegeStore.fetchClassroomSchedule(classroomId)">
+        
+        <!-- Add edit mode toggle -->
+        <v-btn
+          icon
+          size="small"
+          :color="isEditMode ? 'warning' : ''"
+          class="me-2"
+          @click="toggleEditMode"
+          :title="isEditMode ? 'Disable Edit Mode' : 'Enable Edit Mode'"
+        >
+          <v-icon>{{ isEditMode ? 'mdi-lock-open' : 'mdi-lock' }}</v-icon>
+        </v-btn>
+        
+        <v-btn 
+          icon 
+          size="small" 
+          @click="() => collegeStore.fetchClassroomSchedule(classroomId)"
+        >
           <v-icon>mdi-refresh</v-icon>
         </v-btn>
       </v-toolbar>
@@ -48,19 +65,31 @@
                 class="schedule-cell"
                 :class="{ 
                   'weekend-cell': day > 4,
-                  'has-class': getScheduleForTimeSlot(day, time)
+                  'has-class': getScheduleForTimeSlot(day, time),
+                  'dragging': isDragging && draggedSchedule?.id === getScheduleForTimeSlot(day, time)?.id,
+                  'edit-mode': isEditMode
                 }"
-                @click="openScheduleDialog(day, time, getScheduleForTimeSlot(day, time))"
+                @click="!isEditMode && openScheduleDialog(day, time, getScheduleForTimeSlot(day, time))"
+                @dragover="handleDragOver(day, time, $event)"
+                @drop="handleDrop(day, time, $event)"
               >
                 <template v-if="getScheduleForTimeSlot(day, time)">
-                  <div class="class-event">
+                  <div 
+                    class="class-event"
+                    :draggable="isEditMode"
+                    :class="{ 'edit-mode': isEditMode }"
+                    @dragstart="handleDragStart(getScheduleForTimeSlot(day, time)!, day, time, $event)"
+                    @dragend="handleDragEnd($event)"
+                  >
                     <div class="event-content">
                       {{ getCourseDetails(getScheduleForTimeSlot(day, time)?.course) }}
+                      <div v-if="isEditMode" class="resize-handle top"></div>
+                      <div v-if="isEditMode" class="resize-handle bottom"></div>
                     </div>
                   </div>
                 </template>
                 <template v-else>
-                  <div class="add-icon">
+                  <div class="add-icon" v-if="!isEditMode">
                     <v-icon size="small">mdi-plus</v-icon>
                   </div>
                 </template>
@@ -171,11 +200,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
 import { useTeacherStore } from '@/utils/stores/teacherStore';
 import type { Schedule, Course } from '@/utils/interfaces/collegeInterface';
+import { useStorage } from '@vueuse/core';
 
 const route = useRoute();
 const classroomId = Number(route.params.id);
@@ -209,6 +239,18 @@ const timeSlots = computed(() => {
   return slots;
 });
 
+// Add edit mode state
+const isEditMode = ref(false);
+const isDragging = ref(false);
+const dragStartTime = ref('');
+const dragStartDay = ref(0);
+const draggedSchedule = ref<Schedule | null>(null);
+
+// Persistent storage for schedule state
+const savedScheduleState = useStorage('classroom-schedule', {
+  schedules: [] as Schedule[]
+});
+
 // Initialize data
 onMounted(async () => {
   try {
@@ -217,10 +259,20 @@ onMounted(async () => {
       teacherStore.fetchTeachers(),
       collegeStore.fetchClassroomSchedule(classroomId)
     ]);
+    
+    // Restore saved state if exists
+    if (savedScheduleState.value.schedules.length > 0) {
+      collegeStore.schedules = savedScheduleState.value.schedules;
+    }
   } catch (err) {
     console.error('Error loading data:', err);
   }
 });
+
+// Watch for schedule changes and save state
+watch(() => collegeStore.schedules, (newSchedules) => {
+  savedScheduleState.value.schedules = newSchedules;
+}, { deep: true });
 
 // Helper functions
 function getDayName(day: number): string {
@@ -325,6 +377,75 @@ function closeDialog() {
     end_date: '',
     day_of_week: 0
   };
+}
+
+// Drag handlers
+function handleDragStart(schedule: Schedule, day: number, time: string, e: DragEvent) {
+  if (!isEditMode.value || !(e.target instanceof HTMLElement)) return;
+  
+  isDragging.value = true;
+  dragStartTime.value = time;
+  dragStartDay.value = day;
+  draggedSchedule.value = schedule;
+  e.dataTransfer?.setData('text/plain', '');
+}
+
+function handleDragOver(day: number, time: string, e: DragEvent) {
+  if (!isEditMode.value || !isDragging.value || !draggedSchedule.value) return;
+  
+  e.preventDefault();
+  e.dataTransfer!.dropEffect = 'move';
+}
+
+function handleDrop(day: number, time: string, e: DragEvent) {
+  e.preventDefault();
+  if (!isEditMode.value || !isDragging.value || !draggedSchedule.value) return;
+
+  const updatedSchedule = {
+    ...draggedSchedule.value,
+    day_of_week: day,
+    start_time: time,
+    end_time: calculateNewTime(time, calculateTimeDifference(draggedSchedule.value.start_time, draggedSchedule.value.end_time))
+  };
+
+  collegeStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
+  isDragging.value = false;
+  draggedSchedule.value = null;
+}
+
+function toggleEditMode() {
+  isEditMode.value = !isEditMode.value;
+}
+
+async function handleDragEnd(e: DragEvent) {
+  if (isDragging.value && draggedSchedule.value) {
+    const timeSlotDiff = calculateTimeDifference(dragStartTime.value, draggedSchedule.value.end_time);
+    
+    try {
+      await collegeStore.updateSchedule(draggedSchedule.value.id, {
+        ...draggedSchedule.value,
+        start_time: dragStartTime.value,
+        end_time: calculateNewTime(draggedSchedule.value.end_time, timeSlotDiff)
+      });
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+    }
+  }
+  
+  isDragging.value = false;
+  draggedSchedule.value = null;
+}
+
+function calculateNewTime(time: string, diffInSlots: number): string {
+  const date = new Date(`2000-01-01T${time}`);
+  date.setMinutes(date.getMinutes() + (diffInSlots * 30));
+  return date.toTimeString().slice(0, 8);
+}
+
+function calculateTimeDifference(startTime: string, endTime: string): number {
+  const start = new Date(`2000-01-01T${startTime}`);
+  const end = new Date(`2000-01-01T${endTime}`);
+  return Math.round((end.getTime() - start.getTime()) / (30 * 60 * 1000));
 }
 </script>
 
@@ -445,6 +566,7 @@ function closeDialog() {
   z-index: 1;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: move;
 }
 
 .class-event:hover {
@@ -494,5 +616,67 @@ function closeDialog() {
 .weekend .schedule-cell:nth-child(4n+2),
 .weekend .schedule-cell:nth-child(4n+3) {
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+.resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  background: transparent;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background: rgba(var(--v-theme-primary), 0.2);
+}
+
+.resize-handle.top {
+  top: 0;
+}
+
+.resize-handle.bottom {
+  bottom: 0;
+}
+
+.dragging {
+  opacity: 0.5;
+  background-color: rgba(var(--v-theme-primary), 0.1);
+}
+
+.class-event.dragging {
+  opacity: 0.8;
+  transform: scale(1.02);
+}
+
+.edit-mode {
+  cursor: move;
+}
+
+.edit-mode .class-event {
+  border: 2px dashed var(--v-primary-base);
+}
+
+.edit-mode .class-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.edit-mode .resize-handle {
+  display: block;
+}
+
+.schedule-cell.edit-mode {
+  background-color: rgba(var(--v-theme-primary), 0.05);
+}
+
+.schedule-cell.edit-mode:hover {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+}
+
+/* Hide add icon in edit mode */
+.edit-mode .add-icon {
+  display: none;
 }
 </style>
