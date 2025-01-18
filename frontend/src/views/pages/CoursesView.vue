@@ -31,6 +31,10 @@
       :loading="collegeStore.loading"
       class="mt-4"
     >
+      <template #item.teacher="{ item }">
+        {{ getTeacherName(item.teacher) }}
+      </template>
+      
       <template #item.actions="{ item }">
         <v-btn
           color="primary"
@@ -68,9 +72,9 @@
                 <v-col cols="12">
                   <v-text-field
                     v-model="formData.title"
-                    label="Course Title"
+                    label="Course Code"
                     required
-                    :rules="[v => !!v || 'Title is required']"
+                    :rules="[v => !!v || 'Course code is required']"
                   ></v-text-field>
                 </v-col>
 
@@ -80,6 +84,27 @@
                     label="Description"
                     rows="3"
                   ></v-textarea>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-select
+                    v-model="formData.teacher"
+                    :items="teacherStore.teachers"
+                    item-title="first_name"
+                    item-value="id"
+                    label="Teacher"
+                    required
+                    :rules="[v => !!v || 'Teacher is required']"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        {{ item.raw.first_name }} {{ item.raw.last_name }}
+                      </v-list-item>
+                    </template>
+                    <template #selection="{ item }">
+                      {{ item.first_name }} {{ item.last_name }}
+                    </template>
+                  </v-select>
                 </v-col>
               </v-row>
             </v-container>
@@ -107,9 +132,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
+import { useTeacherStore } from '@/utils/stores/teacherStore';
 import type { Course } from '@/utils/interfaces/collegeInterface';
 
 const collegeStore = useCollegeStore();
+const teacherStore = useTeacherStore();
 
 // State
 const dialogVisible = ref(false);
@@ -120,16 +147,24 @@ const form = ref<any>(null);
 const formData = ref({
   title: '',
   description: '',
+  teacher: null as number | null
 });
 
 // Table headers
 const headers = [
-  { title: 'Title', key: 'title' },
+  { title: 'Course Code', key: 'title', align: 'start' },
   { title: 'Description', key: 'description' },
-  { title: 'Actions', key: 'actions', sortable: false }
+  { title: 'Teacher', key: 'teacher' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' }
 ];
 
 // Methods
+function getTeacherName(teacherId: number | null): string {
+  if (!teacherId) return 'Not Assigned';
+  const teacher = teacherStore.teacherById(teacherId);
+  return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
+}
+
 function openAddCourseDialog() {
   editingCourse.value = null;
   resetForm();
@@ -141,6 +176,7 @@ function editCourse(course: Course) {
   formData.value = {
     title: course.title,
     description: course.description || '',
+    teacher: course.teacher
   };
   dialogVisible.value = true;
 }
@@ -150,9 +186,17 @@ async function saveCourse() {
 
   try {
     if (editingCourse.value) {
-      await collegeStore.updateCourse(editingCourse.value.id, formData.value);
+      await collegeStore.updateCourse(editingCourse.value.id, {
+        title: formData.value.title,
+        description: formData.value.description,
+        teacher: formData.value.teacher
+      });
     } else {
-      await collegeStore.createCourse(formData.value);
+      await collegeStore.addCourse({
+        title: formData.value.title,
+        description: formData.value.description,
+        teacher: formData.value.teacher!
+      });
     }
     closeDialog();
   } catch (error) {
@@ -179,6 +223,7 @@ function resetForm() {
   formData.value = {
     title: '',
     description: '',
+    teacher: null
   };
   if (form.value) {
     form.value.resetValidation();
@@ -188,9 +233,12 @@ function resetForm() {
 // Lifecycle
 onMounted(async () => {
   try {
-    await collegeStore.fetchCourses();
+    await Promise.all([
+      collegeStore.fetchCourses(),
+      teacherStore.fetchTeachers()
+    ]);
   } catch (error) {
-    console.error('Error loading courses:', error);
+    console.error('Error loading data:', error);
   }
 });
 </script>

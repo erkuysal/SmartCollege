@@ -230,5 +230,61 @@ export const CollegeService = {
       console.error(`Error deleting attendance ${id}:`, error);
       throw error;
     }
+  },
+
+  // Get schedules for a specific classroom
+  async getClassroomSchedule(classroomId: number): Promise<Schedule[]> {
+    try {
+      const response = await dispatch.get<Schedule[]>(
+        `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${classroomId}/schedule/`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching schedule for classroom ${classroomId}:`, error);
+      throw error;
+    }
+  },
+
+  // Add a new schedule
+  async addSchedule(scheduleData: Omit<Schedule, 'id'>): Promise<Schedule> {
+    try {
+      const response = await dispatch.post<Schedule>(
+        `${COLLEGE_BASE_URL}/${SCHEDULES_ROUTE}/`,
+        scheduleData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error adding schedule:', error);
+      throw error;
+    }
+  },
+
+  // Update a schedule
+  async updateSchedule(
+    scheduleId: number,
+    scheduleData: Partial<Schedule>
+  ): Promise<Schedule> {
+    try {
+      const response = await dispatch.patch<Schedule>(
+        `${COLLEGE_BASE_URL}/${SCHEDULES_ROUTE}/${scheduleId}/`,
+        scheduleData
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating schedule ${scheduleId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a schedule
+  async deleteSchedule(scheduleId: number): Promise<void> {
+    try {
+      await dispatch.delete(
+        `${COLLEGE_BASE_URL}/${SCHEDULES_ROUTE}/${scheduleId}/`
+      );
+    } catch (error) {
+      console.error(`Error deleting schedule ${scheduleId}:`, error);
+      throw error;
+    }
   }
 }; 

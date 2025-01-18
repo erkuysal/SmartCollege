@@ -12,8 +12,8 @@ export interface Classroom {
 export interface Course {
   id: number;
   title: string;
-  description?: string;
-  teacher?: number;
+  description: string;
+  teacher: number;
 }
 
 export enum DAY_OF_WEEK {
@@ -28,13 +28,13 @@ export enum DAY_OF_WEEK {
 
 export interface Schedule {
   id: number;
-  course: number;
-  classroom: number;
-  day_of_week: DAY_OF_WEEK;
+  day_of_week: number;
   start_time: string;
   end_time: string;
   start_date: string;
   end_date: string;
+  course: number;
+  classroom: number;
 }
 
 export interface Attendance {
@@ -46,8 +46,8 @@ export interface Attendance {
 }
 
 export interface PopulatedSchedule extends Omit<Schedule, 'course' | 'classroom'> {
-  course: Course;
-  classroom: Classroom;
+  courseName: string;
+  teacherName: string;
 }
 
 export interface PopulatedAttendance extends Omit<Attendance, 'schedule' | 'student'> {
@@ -68,4 +68,13 @@ export interface CollegeState {
 // Helper types for form data
 export type CourseFormData = Omit<Course, 'id'>;
 export type ScheduleFormData = Omit<Schedule, 'id'>;
-export type AttendanceFormData = Omit<Attendance, 'id' | 'attendance_date'>; 
+export type AttendanceFormData = Omit<Attendance, 'id' | 'attendance_date'>;
+
+// If you need a populated version with teacher details
+export interface PopulatedCourse extends Omit<Course, 'teacher'> {
+  teacher: {
+    id: number;
+    first_name: string;
+    last_name: string;
+  } | null;
+} 

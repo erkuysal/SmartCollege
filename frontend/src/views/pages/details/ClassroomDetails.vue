@@ -7,20 +7,23 @@
           Weekly Schedule
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn
-          icon
-          size="small"
-          :color="isDragMode ? 'warning' : ''"
-          class="me-2"
-          @click="toggleDragMode"
-          :title="isDragMode ? 'Disable Edit Mode' : 'Enable Edit Mode'"
-        >
-          <v-icon>{{ isDragMode ? 'mdi-drag' : 'mdi-drag-variant-off' }}</v-icon>
-        </v-btn>
-        <v-btn icon size="small" @click="refreshSchedule">
+        <v-btn icon size="small" @click="() => collegeStore.fetchClassroomSchedule(classroomId)">
           <v-icon>mdi-refresh</v-icon>
         </v-btn>
       </v-toolbar>
+
+      <v-progress-linear
+        v-if="collegeStore.loading"
+        indeterminate
+      ></v-progress-linear>
+
+      <v-alert
+        v-if="collegeStore.error"
+        type="error"
+        class="ma-2"
+      >
+        {{ collegeStore.error }}
+      </v-alert>
 
       <div class="schedule-wrapper">
         <div class="schedule-grid">
@@ -34,48 +37,26 @@
 
           <!-- Day Columns -->
           <div 
-            v-for="day in days" 
+            v-for="day in [0,1,2,3,4,5,6]" 
             :key="day" 
             class="day-column"
-            :class="{ 'weekend': isWeekend(day) }"
-            @dragover.prevent
-            @drop="handleDrop($event, day)"
+            :class="{ 'weekend': day > 4 }"
           >
-            <div class="header-cell">{{ formatDay(day) }}</div>
+            <div class="header-cell">{{ getDayName(day) }}</div>
             <template v-for="time in timeSlots" :key="`${day}-${time}`">
               <div 
                 class="schedule-cell"
                 :class="{ 
-                  'weekend-cell': isWeekend(day),
-                  'half-hour': isHalfHour(time),
-                  'odd-hour': isOddHour(time),
-                  'empty-cell': !getClassSession(day, time)
+                  'weekend-cell': day > 4,
+                  'has-class': getScheduleForTimeSlot(day, time)
                 }"
-                @click="!isDragMode && handleCellClick(day, time)"
-                @dragover.prevent
-                @drop="handleDrop($event, day, time)"
+                @click="openScheduleDialog(day, time, getScheduleForTimeSlot(day, time))"
               >
-                <template v-if="getClassSession(day, time)">
-                  <div 
-                    class="class-event"
-                    :draggable="isDragMode"
-                    :class="{ 
-                      'draggable': isDragMode,
-                      'dragging': isDragging(getClassSession(day, time))
-                    }"
-                    @dragstart="handleDragStart($event, getClassSession(day, time))"
-                    @dragend="handleDragEnd"
-                    @click.stop="handleEventClick(getClassSession(day, time))"
-                  >
+                <template v-if="getScheduleForTimeSlot(day, time)">
+                  <div class="class-event">
                     <div class="event-content">
-                      <span class="course-name">{{ getClassSession(day, time)?.courseName }}</span>
-                      <span class="teacher-name">{{ getClassSession(day, time)?.teacher }}</span>
+                      {{ getCourseDetails(getScheduleForTimeSlot(day, time)?.course) }}
                     </div>
-                  </div>
-                </template>
-                <template v-else-if="!isDragMode">
-                  <div class="empty-slot">
-                    <v-icon size="small" color="grey-lighten-1">mdi-plus</v-icon>
                   </div>
                 </template>
               </div>
@@ -85,44 +66,99 @@
       </div>
     </v-card>
 
-    <!-- Add/Edit Class Dialog -->
-    <v-dialog v-model="dialog" max-width="400">
+    <!-- Schedule Dialog -->
+    <v-dialog v-model="dialogVisible" max-width="500px">
       <v-card>
-        <v-card-title class="text-subtitle-1 pa-4">
-          {{ editingSession ? 'Edit Class Session' : 'Add New Class' }}
-          <div class="text-caption">
-            {{ selectedDay }} at {{ formatTimeForDisplay(selectedTime) }}
-          </div>
+        <v-card-title>
+          <span class="text-h5">{{ editingSchedule ? 'Edit Schedule' : 'Add Schedule' }}</span>
         </v-card-title>
-        <v-card-text class="pa-4">
-          <v-form ref="form" v-model="isFormValid">
-            <v-select
-              v-model="selectedCourse"
-              :items="courses"
-              label="Course"
-              item-title="name"
-              item-value="id"
-              density="comfortable"
-              variant="outlined"
-              class="mb-2"
-              required
-            ></v-select>
-            <v-select
-              v-model="selectedTeacher"
-              :items="teachers"
-              label="Teacher"
-              item-title="name"
-              item-value="id"
-              density="comfortable"
-              variant="outlined"
-              required
-            ></v-select>
+
+        <v-card-text>
+          <v-form ref="form" v-model="isValid">
+            <v-container>
+              <v-row>
+                <v-col cols="12">
+                  <v-select
+                    v-model="formData.course"
+                    :items="collegeStore.courses"
+                    item-title="title"
+                    item-value="id"
+                    label="Course"
+                    required
+                    :rules="[v => !!v || 'Course is required']"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        {{ item.raw.title }} - {{ getCourseDetails(item.raw.id) }}
+                      </v-list-item>
+                    </template>
+                  </v-select>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="formData.start_time"
+                    label="Start Time"
+                    type="time"
+                    required
+                    :rules="[v => !!v || 'Start time is required']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="formData.end_time"
+                    label="End Time"
+                    type="time"
+                    required
+                    :rules="[v => !!v || 'End time is required']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="formData.start_date"
+                    label="Start Date"
+                    type="date"
+                    required
+                    :rules="[v => !!v || 'Start date is required']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="formData.end_date"
+                    label="End Date"
+                    type="date"
+                    required
+                    :rules="[v => !!v || 'End date is required']"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-container>
           </v-form>
         </v-card-text>
-        <v-card-actions class="pa-4">
+
+        <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="saveClassSession">Save</v-btn>
+          <v-btn 
+            v-if="editingSchedule"
+            color="error" 
+            variant="text" 
+            @click="deleteSchedule(editingSchedule)"
+          >
+            Delete
+          </v-btn>
+          <v-btn color="error" variant="text" @click="closeDialog">Cancel</v-btn>
+          <v-btn
+            color="primary"
+            variant="text"
+            @click="saveSchedule"
+            :loading="collegeStore.loading"
+            :disabled="!isValid"
+          >
+            Save
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -134,218 +170,157 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
 import { useTeacherStore } from '@/utils/stores/teacherStore';
-import type { ClassSession } from '@/utils/interfaces/collegeInterface';
+import type { Schedule, Course } from '@/utils/interfaces/collegeInterface';
 
 const route = useRoute();
 const classroomId = Number(route.params.id);
 const collegeStore = useCollegeStore();
 const teacherStore = useTeacherStore();
 
-// Initialize data
-onMounted(async () => {
-  await Promise.all([
-    collegeStore.fetchCourses(),
-    teacherStore.fetchTeachers(),
-    fetchClassSessions()
-  ]);
+// State
+const dialogVisible = ref(false);
+const selectedTimeSlot = ref<{ day: number; time: string } | null>(null);
+const editingSchedule = ref<Schedule | null>(null);
+const isValid = ref(false);
+const form = ref<any>(null);
+
+// Form data
+const formData = ref({
+  course: null as number | null,
+  start_time: '',
+  end_time: '',
+  start_date: '',
+  end_date: '',
+  day_of_week: 0
 });
 
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-// Modified to generate 30-minute intervals
-function generateTimeSlots() {
+// Time slots generation (8:00 AM to 6:00 PM in 30-minute intervals)
+const timeSlots = computed(() => {
   const slots = [];
-  for (let hour = 8; hour <= 17; hour++) {
-    const hourStr = hour.toString().padStart(2, '0');
-    slots.push(`${hourStr}:00`);
-    slots.push(`${hourStr}:30`);
+  for (let hour = 8; hour <= 18; hour++) {
+    slots.push(`${hour.toString().padStart(2, '0')}:00:00`);
+    slots.push(`${hour.toString().padStart(2, '0')}:30:00`);
   }
   return slots;
-}
+});
 
-const timeSlots = generateTimeSlots();
+// Initialize data
+onMounted(async () => {
+  try {
+    await Promise.all([
+      collegeStore.fetchCourses(),
+      teacherStore.fetchTeachers(),
+      collegeStore.fetchClassroomSchedule(classroomId)
+    ]);
+  } catch (err) {
+    console.error('Error loading data:', err);
+  }
+});
 
-// Computed properties for courses and teachers
-const courses = computed(() => collegeStore.courses);
-const teachers = computed(() => teacherStore.teachers);
-
-// Only show full time for hour marks
-function shouldShowFullTime(time: string): boolean {
-  return time.endsWith(':00');
-}
-
-function isHalfHour(time: string): boolean {
-  return time.endsWith(':30');
+// Helper functions
+function getDayName(day: number): string {
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  return days[day];
 }
 
 function formatTime(time: string): string {
-  const [hours, minutes] = time.split(':');
-  return `${hours}${minutes === '00' ? ':00' : ''}`;
+  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 }
 
-function formatTimeForDisplay(time: string): string {
-  const [hours, minutes] = time.split(':');
-  const period = Number(hours) >= 12 ? 'PM' : 'AM';
-  const displayHours = Number(hours) > 12 ? Number(hours) - 12 : Number(hours);
-  return `${displayHours}:${minutes} ${period}`;
+function shouldShowFullTime(time: string): boolean {
+  return time.endsWith(':00:00');
 }
 
-// UI state
-const isDragMode = ref(false);
-const draggedEvent = ref<ClassSession | null>(null);
-const dialog = ref(false);
-const selectedDay = ref('');
-const selectedTime = ref('');
-const selectedCourse = ref<number | null>(null);
-const selectedTeacher = ref<number | null>(null);
-const editingSession = ref<ClassSession | null>(null);
-const isFormValid = ref(false);
-const classSessions = ref<ClassSession[]>([]);
-
-function formatDay(day: string): string {
-  return day.slice(0, 3);
+function getScheduleForTimeSlot(day: number, time: string): Schedule | null {
+  return collegeStore.schedules.find(s => 
+    s.day_of_week === day && 
+    s.start_time === time
+  ) || null;
 }
 
-function isWeekend(day: string): boolean {
-  return day === 'Saturday' || day === 'Sunday';
+function getCourseDetails(courseId: number | null): string {
+  if (!courseId) return 'No Course';
+  const course = collegeStore.getCourseById(courseId);
+  if (!course) return 'Unknown Course';
+  const teacher = teacherStore.teacherById(course.teacher);
+  return `${course.title} - ${teacher ? `${teacher.first_name} ${teacher.last_name}` : 'No Teacher'}`;
 }
 
-function getClassSession(day: string, time: string) {
-  return classSessions.value.find(
-    session => session.day === day && session.time === time
-  );
-}
-
-function handleCellClick(day: string, time: string) {
-  if (getClassSession(day, time)) return;
-  selectedDay.value = day;
-  selectedTime.value = time;
-  editingSession.value = null;
-  selectedCourse.value = null;
-  selectedTeacher.value = null;
-  dialog.value = true;
-}
-
-function handleEventClick(session: ClassSession) {
-  if (isDragMode.value) return;
-  editingSession.value = session;
-  selectedDay.value = session.day;
-  selectedTime.value = session.time;
-  selectedCourse.value = session.courseId;
-  selectedTeacher.value = session.teacherId;
-  dialog.value = true;
-}
-
-function toggleDragMode() {
-  isDragMode.value = !isDragMode.value;
-  draggedEvent.value = null;
-}
-
-function isDragging(session: ClassSession | null): boolean {
-  return !!(draggedEvent.value && draggedEvent.value.id === session?.id);
-}
-
-async function saveClassSession() {
-  if (!isFormValid.value || !selectedCourse.value || !selectedTeacher.value) return;
-
-  const course = collegeStore.getCourseById(selectedCourse.value);
-  const teacher = teacherStore.teacherById(selectedTeacher.value);
-
-  if (!course || !teacher) return;
-
-  const newSession: ClassSession = {
-    id: crypto.randomUUID(),
-    day: selectedDay.value,
-    time: selectedTime.value,
-    courseId: selectedCourse.value,
-    courseName: course.title,
-    teacherId: selectedTeacher.value,
-    teacher: `${teacher.first_name} ${teacher.last_name}`,
-  };
-
-  if (editingSession.value) {
-    // Update existing session
-    const index = classSessions.value.findIndex(s => s.id === editingSession.value?.id);
-    if (index !== -1) {
-      classSessions.value[index] = newSession;
-    }
-  } else {
-    // Add new session
-    classSessions.value.push(newSession);
-  }
-
-  dialog.value = false;
-}
-
-async function refreshSchedule() {
-  await Promise.all([
-    collegeStore.fetchCourses(),
-    teacherStore.fetchTeachers(),
-    fetchClassSessions()
-  ]);
-}
-
-function isOddHour(time: string): boolean {
-  const hour = parseInt(time.split(':')[0]);
-  return hour % 2 !== 0;
-}
-
-function handleDragStart(event: DragEvent, classSession: ClassSession) {
-  if (!isDragMode.value) {
-    event.preventDefault();
-    return;
-  }
+// Dialog functions
+function openScheduleDialog(day: number, time: string, schedule?: Schedule) {
+  selectedTimeSlot.value = { day, time };
+  editingSchedule.value = schedule || null;
   
-  if (event.dataTransfer) {
-    draggedEvent.value = classSession;
-    event.dataTransfer.effectAllowed = 'move';
-  }
-}
-
-function handleDrop(event: DragEvent, day: string, time?: string) {
-  event.preventDefault();
-  if (!isDragMode.value) return;
-  
-  if (draggedEvent.value && time) {
-    const updatedSession = {
-      ...draggedEvent.value,
-      day,
-      time
+  if (schedule) {
+    formData.value = {
+      course: schedule.course,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      start_date: schedule.start_date,
+      end_date: schedule.end_date,
+      day_of_week: schedule.day_of_week
     };
-    // Remove from old position
-    const index = classSessions.value.findIndex(session => session.id === draggedEvent.value?.id);
-    if (index !== -1) {
-      classSessions.value.splice(index, 1);
-    }
-    // Add to new position
-    classSessions.value.push(updatedSession);
-    draggedEvent.value = null;
+  } else {
+    formData.value = {
+      course: null,
+      start_time: time,
+      end_time: time.replace(':00:', ':50:'), // Default 50-minute lesson
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(new Date().setMonth(new Date().getMonth() + 4)).toISOString().split('T')[0],
+      day_of_week: day
+    };
   }
+  
+  dialogVisible.value = true;
 }
 
-function handleDragEnd() {
-  draggedEvent.value = null;
-}
+async function saveSchedule() {
+  if (!isValid.value || !selectedTimeSlot.value) return;
 
-const fetchClassSessions = async () => {
   try {
-    // Assuming you have a method in collegeStore to fetch sessions for a specific classroom
-    const sessions = await collegeStore.getSchedulesByClassroom(classroomId);
-    classSessions.value = sessions.map(schedule => ({
-      id: schedule.id.toString(),
-      day: days[schedule.day_of_week],
-      time: schedule.start_time,
-      courseId: schedule.course,
-      courseName: collegeStore.getCourseName(schedule.course),
-      teacherId: collegeStore.getCourseById(schedule.course)?.teacher || 0,
-      teacher: teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)
-        ? `${teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)?.first_name} ${teacherStore.teacherById(collegeStore.getCourseById(schedule.course)?.teacher || 0)?.last_name}`
-        : 'Unknown Teacher',
-    }));
+    const scheduleData = {
+      ...formData.value,
+      classroom: classroomId,
+      course: formData.value.course!
+    };
+
+    if (editingSchedule.value) {
+      await collegeStore.updateSchedule(editingSchedule.value.id, scheduleData);
+    } else {
+      await collegeStore.addSchedule(scheduleData);
+    }
+    closeDialog();
   } catch (error) {
-    console.error('Error fetching class sessions:', error);
+    console.error('Error saving schedule:', error);
   }
-};
+}
+
+async function deleteSchedule(schedule: Schedule) {
+  if (confirm('Are you sure you want to delete this schedule?')) {
+    try {
+      await collegeStore.deleteSchedule(schedule.id);
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+    }
+  }
+}
+
+function closeDialog() {
+  dialogVisible.value = false;
+  selectedTimeSlot.value = null;
+  editingSchedule.value = null;
+  formData.value = {
+    course: null,
+    start_time: '',
+    end_time: '',
+    start_date: '',
+    end_date: '',
+    day_of_week: 0
+  };
+}
 </script>
 
 <style scoped lang="scss">
@@ -373,6 +348,10 @@ const fetchClassSessions = async () => {
 .time-column {
   flex: 0 0 60px;
   min-width: 60px;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 3;
 }
 
 .day-column:last-child {
@@ -390,6 +369,9 @@ const fetchClassSessions = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .time-header {
@@ -397,7 +379,7 @@ const fetchClassSessions = async () => {
 }
 
 .time-cell, .schedule-cell {
-  height: 25px; /* Reduced height for 30-minute intervals */
+  height: 25px;
   padding: 2px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   font-size: 0.75rem;
@@ -406,84 +388,9 @@ const fetchClassSessions = async () => {
   justify-content: center;
 }
 
-.time-cell {
-  color: rgba(0, 0, 0, 0.6);
-}
-
 .schedule-cell {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.schedule-cell:hover {
-  background-color: rgba(0, 0, 0, 0.06) !important;
-  z-index: 2;
-}
-
-.has-class {
-  background-color: var(--v-primary-lighten5, #E3F2FD) !important;
   position: relative;
-  z-index: 1;
-}
-
-.weekend-cell {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.weekend .header-cell {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.class-info {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 2px;
-  background-color: inherit;
-}
-
-.course-name {
-  font-weight: 500;
-  font-size: 0.75rem;
-  color: var(--v-primary-base);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-.teacher-name {
-  font-size: 0.7rem;
-  color: rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-.text-caption {
-  font-size: 0.75rem;
-  color: rgba(0, 0, 0, 0.6);
-  margin-top: 4px;
-}
-
-.half-hour {
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.12); /* Dashed border for 30-minute marks */
-}
-
-.odd-hour {
-  background-color: rgba(0, 0, 0, 0.02); /* Light gray for odd hours */
-}
-
-.weekend-cell.odd-hour {
-  background-color: rgba(0, 0, 0, 0.04); /* Slightly darker for weekend odd hours */
+  cursor: pointer;
 }
 
 .class-event {
@@ -500,33 +407,10 @@ const fetchClassSessions = async () => {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.class-event.draggable {
-  cursor: grab;
-}
-
-.class-event.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-}
-
 .class-event:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
   z-index: 2;
-}
-
-.class-event.draggable::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 12px;
-  height: 12px;
-  background-image: radial-gradient(circle, rgba(0,0,0,0.3) 1px, transparent 2px);
-  background-size: 4px 4px;
-  background-repeat: repeat;
-  opacity: 0.5;
-  border-radius: 2px;
 }
 
 .event-content {
@@ -554,69 +438,11 @@ const fetchClassSessions = async () => {
   text-overflow: ellipsis;
 }
 
-.schedule-cell {
-  position: relative;
-  height: 25px;
-  padding: 2px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-.odd-hour {
+.weekend-cell {
   background-color: rgba(0, 0, 0, 0.02);
 }
 
-.weekend-cell.odd-hour {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.half-hour {
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
-}
-
-.schedule-cell:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.day-column {
-  position: relative;
-  flex: 1;
-  min-width: 120px;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-.time-column {
-  position: sticky;
-  left: 0;
-  background: white;
-  z-index: 3;
-}
-
-.header-cell {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: inherit;
-}
-
-.empty-cell {
-  cursor: pointer;
-}
-
-.empty-slot {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.empty-cell:hover .empty-slot {
-  opacity: 1;
-}
-
-.empty-cell:hover {
-  background-color: var(--v-primary-lighten-5);
+.weekend .header-cell {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 </style>

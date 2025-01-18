@@ -63,10 +63,10 @@ const dashboardRoutes = [
         component: ClassroomsView,
         children: [
           {
-            path: ':id',
-            name: 'classroomDetails',
+            path: ':id/details',
+            name: 'classroom-details',
             component: ClassroomDetails,
-            props: true,
+            props: true
           },
         ],
       },
