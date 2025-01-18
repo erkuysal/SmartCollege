@@ -59,6 +59,11 @@
                     </div>
                   </div>
                 </template>
+                <template v-else>
+                  <div class="add-icon">
+                    <v-icon size="small">mdi-plus</v-icon>
+                  </div>
+                </template>
               </div>
             </template>
           </div>
@@ -388,11 +393,46 @@ function closeDialog() {
   justify-content: center;
 }
 
+/* New styles for alternating hours */
+.time-cell:nth-child(4n+2),
+.time-cell:nth-child(4n+3),
+.schedule-cell:nth-child(4n+2),
+.schedule-cell:nth-child(4n+3) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
 .schedule-cell {
   position: relative;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  overflow: hidden;
 }
 
+.schedule-cell:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* New styles for the add icon */
+.add-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background-color: rgba(var(--v-theme-primary), 0.05);
+  color: rgb(var(--v-theme-primary));
+}
+
+.schedule-cell:hover .add-icon {
+  opacity: 1;
+}
+
+/* Update class-event to work with add icon */
 .class-event {
   position: absolute;
   top: 2px;
@@ -442,7 +482,17 @@ function closeDialog() {
   background-color: rgba(0, 0, 0, 0.02);
 }
 
+/* Updated weekend styles to work with alternating hours */
 .weekend .header-cell {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.weekend .schedule-cell {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.weekend .schedule-cell:nth-child(4n+2),
+.weekend .schedule-cell:nth-child(4n+3) {
   background-color: rgba(0, 0, 0, 0.05);
 }
 </style>
