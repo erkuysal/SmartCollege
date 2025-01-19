@@ -26,7 +26,7 @@
         lines="one"
         density="comfortable"
         select-strategy="single"
-        v-model:selected="selectedIndex"
+        :selected="[selectedIndex]"
         class="sidebar-nav flex-grow-1"
       >
         <v-list-item
@@ -34,6 +34,7 @@
           :key="i"
           :value="i"
           class="sidebar-item"
+          :active="selectedIndex === i"
           @click="navigateTo(i)"
         >
           <div class="d-flex align-center" style="gap: 8px;">
@@ -112,7 +113,6 @@ const route = useRoute();
 // Drawer state
 const drawerOpen = ref(true);
 const drawerWidth = 260;
-const selectedIndex = ref(0);
 
 // Mobile detection
 const { smAndDown } = useDisplay();
@@ -132,6 +132,12 @@ const navItems = [
   { title: 'Schedules',   icon: 'mdi-calendar-clock',     route: '/admin/schedules' },
   { title: 'Attendance',  icon: 'mdi-clipboard-check',    route: '/admin/attendance' },
 ];
+
+// Update selectedIndex to be computed based on current route
+const selectedIndex = computed(() => {
+  const currentRoute = route.path;
+  return navItems.findIndex(item => item.route === currentRoute);
+});
 
 // Computed page title based on current route
 const pageTitle = computed(() => {
@@ -199,5 +205,18 @@ onMounted(async () => {
 
 .text-grey-lighten-3 {
   color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.sidebar-item {
+  transition: background-color 0.2s ease;
+}
+
+.v-list-item--active {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.v-list-item--active .v-icon,
+.v-list-item--active span {
+  color: #fff !important;
 }
 </style>
