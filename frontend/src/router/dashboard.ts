@@ -2,21 +2,22 @@
 import DashboardLayout from "@/views/layouts/DashboardLayout.vue";
 
 // Parent Pages
-import DashboardView from '@/views/pages/DashboardView.vue'
-import StudentsView from '@/views/pages/StudentsView.vue'
-import StaffView from '@/views/pages/StaffView.vue'
-import CoursesView from '@/views/pages/CoursesView.vue'
-import ClassroomsView from '@/views/pages/ClassroomsView.vue'
-import DepartmentsView from '@/views/pages/DepartmentsView.vue'
-import TasksView from '@/views/pages/TasksView.vue'
-import EventsView from '@/views/pages/EventsView.vue'
+import DashboardView from '@/views/pages/management/DashboardView.vue'
+import StudentsView from '@/views/pages/management/StudentsView.vue'
+import StaffView from '@/views/pages/management/StaffView.vue'
+import CoursesView from '@/views/pages/management/CoursesView.vue'
+import ClassroomsView from '@/views/pages/management/ClassroomsView.vue'
+import DepartmentsView from '@/views/pages/management/DepartmentsView.vue'
+import TasksView from '@/views/pages/management/TasksView.vue'
+import EventsView from '@/views/pages/management/AttendanceView.vue'
 
 // --------- Child Pages -----
 // -- Actions --
 import AddStudent from "@/views/pages/actions/AddStudent.vue";
 
 // -- Details --
-import ClassroomDetails from "@/views/pages/details/ClassroomDetails.vue";
+import ClassroomDetails from "@/views/pages/details/ClassroomSchedule.vue";
+import CourseDetails from "@/views/pages/details/CourseDetails.vue";
 
 
 // Optional: If you have a login or public pages, import them here
@@ -54,8 +55,19 @@ const dashboardRoutes = [
       },
       {
         path: 'courses',
-        name: 'courses',
-        component: CoursesView,
+        children: [
+          {
+            path: '',  // Empty path for the courses list
+            name: 'courses',
+            component: CoursesView,
+          },
+          {
+            path: ':id/details',
+            name: 'course-details',
+            component: CourseDetails,
+            props: true
+          },
+        ],
       },
       {
         path: 'classrooms',

@@ -176,7 +176,7 @@ onMounted(async () => {
     await Promise.all([
       collegeStore.fetchClassrooms(),
       collegeStore.fetchCourses(),
-      collegeStore.fetchSchedules(),
+    //collegeStore.fetchSchedules(),
       teacherStore.fetchTeachers(),
       studentStore.listAllStudents()
     ]);
