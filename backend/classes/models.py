@@ -35,9 +35,14 @@ class Courses(models.Model):
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,
-        null=True,
+        null=True, 
         blank=True,
         related_name='lectures_taught'
+    )
+    students = models.ManyToManyField(
+        Student,
+        through='Enrollment',
+        related_name='courses'
     )
 
     # For a more elaborate system, you may create a separate Teacher model
@@ -104,3 +109,27 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student.name} - {self.schedule.course.title} on {self.date}: {self.status}"
+
+
+class Enrollment(models.Model):
+    """
+    Represents a student's enrollment in a course.
+    """
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='enrollments'
+    )
+    course = models.ForeignKey(
+        Courses,
+        on_delete=models.CASCADE,
+        related_name='enrollments'
+    )
+    enrollment_date = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['student', 'course']  # Prevents duplicate enrollments
+
+    def __str__(self):
+        return f"{self.student} enrolled in {self.course}"
