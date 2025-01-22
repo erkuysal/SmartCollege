@@ -1,5 +1,5 @@
-import type { Teacher } from './teacherInterface';
-import type { Student } from './studentInterface';
+import type { Teacher } from './users/teacherInterface';
+import type { Student } from './users/studentInterface';
 
 // Base interfaces for each model
 export interface Classroom {
@@ -14,6 +14,14 @@ export interface Course {
   title: string;
   description: string;
   teacher: number;
+}
+
+export interface Enrollment {
+  id: number;
+  student: number;
+  course: number;
+  enrollment_date: string;
+  is_active: boolean;
 }
 
 export enum DAY_OF_WEEK {
@@ -77,4 +85,4 @@ export interface PopulatedCourse extends Omit<Course, 'teacher'> {
     first_name: string;
     last_name: string;
   } | null;
-} 
+}

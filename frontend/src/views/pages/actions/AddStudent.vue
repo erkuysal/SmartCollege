@@ -61,9 +61,9 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { useStudentStore } from '@/utils/stores/studentStore'
+import { useStudentStore } from '@/utils/stores/users/studentStore'
 import { useRouter } from "vue-router";
-import type { Student } from '@/utils/interfaces/studentInterface'
+import type { Student } from '@/utils/interfaces/users/studentInterface'
 
 const router = useRouter()
 

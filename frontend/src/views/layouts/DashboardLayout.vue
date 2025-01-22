@@ -97,8 +97,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useDisplay } from 'vuetify';
-import { useStudentStore } from "@/utils/stores/studentStore";
-import { useTeacherStore } from "@/utils/stores/teacherStore";
+import { useStudentStore } from "@/utils/stores/users/studentStore";
+import { useTeacherStore } from "@/utils/stores/users/teacherStore";
 import { useCollegeStore } from "@/utils/stores/collegeStore";
 
 // Store instances

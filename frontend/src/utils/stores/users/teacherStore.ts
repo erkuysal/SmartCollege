@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import type { Teacher, TeacherState } from '@/utils/interfaces/teacherInterface';
-import { TeacherService } from '@/utils/services/teacherService';
+import type { Teacher, TeacherState } from '@/utils/interfaces/users/teacherInterface';
+import { TeacherService } from '@/utils/services/users/teacherService';
 
 export const useTeacherStore = defineStore('teacherStore', {
   state: (): TeacherState => ({
@@ -87,4 +87,4 @@ export const useTeacherStore = defineStore('teacherStore', {
       }
     }
   }
-}); 
+});

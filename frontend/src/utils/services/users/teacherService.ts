@@ -1,6 +1,6 @@
 import dispatch from "@/utils/dispatcher";
 import { API_ROUTES } from "@/utils/config/apiRoutes";
-import type { Teacher } from "@/utils/interfaces/studentInterface";
+import type { Teacher } from "@/utils/interfaces/users/studentInterface";
 
 const { USERS_BASE_URL, TEACHERS_ROUTE } = API_ROUTES;
 

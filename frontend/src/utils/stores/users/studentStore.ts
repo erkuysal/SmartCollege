@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { StudentService } from '@/utils/services/studentService'
-import type { Student } from '@/utils/interfaces/studentInterface'
+import { StudentService } from '@/utils/services/users/studentService'
+import type { Student } from '@/utils/interfaces/users/studentInterface'
 
 export const useStudentStore = defineStore('student', {
   // ========== State ==========
@@ -21,6 +21,8 @@ export const useStudentStore = defineStore('student', {
      * Returns the number of students in the store.
      */
     totalStudents: (state) => state.students.length,
+    studentById: (state) => (id: number) =>
+      state.students.find(student => student.student_number === id.toString()),
   },
 
   // ========== Actions ==========
@@ -60,7 +62,7 @@ export const useStudentStore = defineStore('student', {
     },
 
     /**
-     * Creates a new student on the server and adds it to the store’s state.
+     * Creates a new student on the server and adds it to the store's state.
      */
     async addStudent(newStudent: Student) {
       this.loading = true
@@ -76,7 +78,7 @@ export const useStudentStore = defineStore('student', {
     },
 
     /**
-     * Updates an existing student on the server, then updates it in the store’s state.
+     * Updates an existing student on the server, then updates it in the store's state.
      */
     async updateStudent(studentNumber: string, updateData: Partial<Student>) {
       this.loading = true
@@ -95,7 +97,7 @@ export const useStudentStore = defineStore('student', {
     },
 
     /**
-     * Deletes an existing student on the server, then removes it from the store’s state.
+     * Deletes an existing student on the server, then removes it from the store's state.
      */
     async deleteStudent(studentNumber: string) {
       this.loading = true
@@ -153,5 +155,24 @@ export const useStudentStore = defineStore('student', {
         this.loading = false
       }
     },
+
+    async fetchStudents() {
+      this.loading = true;
+      try {
+        const response = await StudentService.getStudents();
+        this.students = response;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    resetState() {
+      this.students = [];
+      this.loading = false;
+      this.error = null;
+    }
   },
 })

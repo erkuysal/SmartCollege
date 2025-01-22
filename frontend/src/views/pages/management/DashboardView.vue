@@ -116,8 +116,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useStudentStore } from '@/utils/stores/studentStore';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
+import { useStudentStore } from '@/utils/stores/users/studentStore';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
 import type { Schedule } from '@/utils/interfaces/collegeInterface';
 
@@ -135,18 +135,18 @@ const classroomCount = computed(() => collegeStore.classrooms.length);
 // Get today's schedules
 const todaySchedules = computed(() => {
   const today = new Date().getDay();
-  return collegeStore.schedules.filter(schedule => 
+  return collegeStore.schedules.filter(schedule =>
     schedule.day_of_week === today
-  ).sort((a, b) => 
+  ).sort((a, b) =>
     a.start_time.localeCompare(b.start_time)
   );
 });
 
 // Helper functions
 function formatTime(time: string): string {
-  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 }
 

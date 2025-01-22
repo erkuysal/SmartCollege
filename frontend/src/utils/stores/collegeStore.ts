@@ -3,7 +3,8 @@ import { CollegeService } from '@/utils/services/collegeService';
 import type { 
   Classroom, 
   Course, 
-  Schedule 
+  Schedule,
+  Enrollment 
 } from '@/utils/interfaces/collegeInterface';
 
 export const useCollegeStore = defineStore('college', {
@@ -11,6 +12,7 @@ export const useCollegeStore = defineStore('college', {
     classrooms: [] as Classroom[],
     courses: [] as Course[],
     schedules: [] as Schedule[],
+    enrollments: [] as Enrollment[],
     loading: false,
     error: null as string | null,
   }),
@@ -27,6 +29,15 @@ export const useCollegeStore = defineStore('college', {
 
     getSchedulesByClassroom: (state) => (classroomId: number) =>
       state.schedules.filter(schedule => schedule.classroom === classroomId),
+
+    getEnrollmentById: (state) => (id: number) =>
+      state.enrollments.find(enrollment => enrollment.id === id),
+
+    getEnrollmentsByStudent: (state) => (studentId: number) =>
+      state.enrollments.filter(enrollment => enrollment.student === studentId),
+
+    getEnrollmentsByCourse: (state) => (courseId: number) =>
+      state.enrollments.filter(enrollment => enrollment.course === courseId),
   },
 
   actions: {
@@ -123,11 +134,106 @@ export const useCollegeStore = defineStore('college', {
       }
     },
 
+    // Enrollment actions
+    async fetchEnrollments() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await CollegeService.getEnrollments();
+        this.enrollments = response;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchStudentEnrollments(studentId: number) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await CollegeService.getStudentEnrollments(studentId);
+        const otherEnrollments = this.enrollments.filter(e => e.student !== studentId);
+        this.enrollments = [...otherEnrollments, ...response];
+        return response;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchCourseEnrollments(courseId: number) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await CollegeService.getCourseEnrollments(courseId);
+        const otherEnrollments = this.enrollments.filter(e => e.course !== courseId);
+        this.enrollments = [...otherEnrollments, ...response];
+        return response;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async createEnrollment(data: { student: number; course: number }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const newEnrollment = await CollegeService.createEnrollment(data);
+        this.enrollments.push(newEnrollment);
+        return newEnrollment;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updateEnrollment(id: number, data: Partial<Enrollment>) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const updatedEnrollment = await CollegeService.updateEnrollment(id, data);
+        const index = this.enrollments.findIndex(e => e.id === id);
+        if (index !== -1) {
+          this.enrollments[index] = updatedEnrollment;
+        }
+        return updatedEnrollment;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async deleteEnrollment(id: number) {
+      this.loading = true;
+      this.error = null;
+      try {
+        await CollegeService.deleteEnrollment(id);
+        this.enrollments = this.enrollments.filter(e => e.id !== id);
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     // Reset state
     resetState() {
       this.classrooms = [];
       this.courses = [];
       this.schedules = [];
+      this.enrollments = [];
       this.loading = false;
       this.error = null;
     }

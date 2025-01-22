@@ -7,7 +7,7 @@
           Weekly Schedule
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        
+
         <!-- Add edit mode toggle -->
         <v-btn
           icon
@@ -19,10 +19,10 @@
         >
           <v-icon>{{ isEditMode ? 'mdi-lock-open' : 'mdi-lock' }}</v-icon>
         </v-btn>
-        
-        <v-btn 
-          icon 
-          size="small" 
+
+        <v-btn
+          icon
+          size="small"
           @click="() => collegeStore.fetchClassroomSchedule(classroomId)"
         >
           <v-icon>mdi-refresh</v-icon>
@@ -53,17 +53,17 @@
           </div>
 
           <!-- Day Columns -->
-          <div 
-            v-for="day in [0,1,2,3,4,5,6]" 
-            :key="day" 
+          <div
+            v-for="day in [0,1,2,3,4,5,6]"
+            :key="day"
             class="day-column"
             :class="{ 'weekend': day > 4 }"
           >
             <div class="header-cell">{{ getDayName(day) }}</div>
             <template v-for="time in timeSlots" :key="`${day}-${time}`">
-              <div 
+              <div
                 class="schedule-cell"
-                :class="{ 
+                :class="{
                   'weekend-cell': day > 4,
                   'has-class': getScheduleForTimeSlot(day, time),
                   'dragging': isDragging && draggedSchedule?.id === getScheduleForTimeSlot(day, time)?.id,
@@ -74,7 +74,7 @@
                 @drop="handleDrop(day, time, $event)"
               >
                 <template v-if="getScheduleForTimeSlot(day, time)">
-                  <div 
+                  <div
                     class="class-event"
                     :draggable="isEditMode"
                     :class="{ 'edit-mode': isEditMode }"
@@ -175,10 +175,10 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn 
+          <v-btn
             v-if="editingSchedule"
-            color="error" 
-            variant="text" 
+            color="error"
+            variant="text"
             @click="deleteSchedule(editingSchedule)"
           >
             Delete
@@ -203,7 +203,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
 import type { Schedule, Course } from '@/utils/interfaces/collegeInterface';
 import { useStorage } from '@vueuse/core';
 
@@ -259,7 +259,7 @@ onMounted(async () => {
       teacherStore.fetchTeachers(),
       collegeStore.fetchClassroomSchedule(classroomId)
     ]);
-    
+
     // Restore saved state if exists
     if (savedScheduleState.value.schedules.length > 0) {
       collegeStore.schedules = savedScheduleState.value.schedules;
@@ -281,9 +281,9 @@ function getDayName(day: number): string {
 }
 
 function formatTime(time: string): string {
-  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 }
 
@@ -292,8 +292,8 @@ function shouldShowFullTime(time: string): boolean {
 }
 
 function getScheduleForTimeSlot(day: number, time: string): Schedule | null {
-  return collegeStore.schedules.find(s => 
-    s.day_of_week === day && 
+  return collegeStore.schedules.find(s =>
+    s.day_of_week === day &&
     s.start_time === time
   ) || null;
 }
@@ -310,7 +310,7 @@ function getCourseDetails(courseId: number | null): string {
 function openScheduleDialog(day: number, time: string, schedule?: Schedule) {
   selectedTimeSlot.value = { day, time };
   editingSchedule.value = schedule || null;
-  
+
   if (schedule) {
     formData.value = {
       course: schedule.course,
@@ -330,7 +330,7 @@ function openScheduleDialog(day: number, time: string, schedule?: Schedule) {
       day_of_week: day
     };
   }
-  
+
   dialogVisible.value = true;
 }
 
@@ -382,7 +382,7 @@ function closeDialog() {
 // Drag handlers
 function handleDragStart(schedule: Schedule, day: number, time: string, e: DragEvent) {
   if (!isEditMode.value || !(e.target instanceof HTMLElement)) return;
-  
+
   isDragging.value = true;
   dragStartTime.value = time;
   dragStartDay.value = day;
@@ -392,7 +392,7 @@ function handleDragStart(schedule: Schedule, day: number, time: string, e: DragE
 
 function handleDragOver(day: number, time: string, e: DragEvent) {
   if (!isEditMode.value || !isDragging.value || !draggedSchedule.value) return;
-  
+
   e.preventDefault();
   e.dataTransfer!.dropEffect = 'move';
 }
@@ -420,7 +420,7 @@ function toggleEditMode() {
 async function handleDragEnd(e: DragEvent) {
   if (isDragging.value && draggedSchedule.value) {
     const timeSlotDiff = calculateTimeDifference(dragStartTime.value, draggedSchedule.value.end_time);
-    
+
     try {
       await collegeStore.updateSchedule(draggedSchedule.value.id, {
         ...draggedSchedule.value,
@@ -431,7 +431,7 @@ async function handleDragEnd(e: DragEvent) {
       console.error('Error updating schedule:', error);
     }
   }
-  
+
   isDragging.value = false;
   draggedSchedule.value = null;
 }

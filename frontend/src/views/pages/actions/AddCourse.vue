@@ -83,7 +83,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { PropType } from 'vue';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
 import type { Course, CourseFormData } from '@/utils/interfaces/collegeInterface';
 
@@ -121,7 +121,7 @@ const dialogModel = computed({
   set: (value) => emit('update:modelValue', value)
 });
 
-const teachers = computed(() => 
+const teachers = computed(() =>
   teacherStore.teachers.map(teacher => ({
     id: teacher.id,
     full_name: `${teacher.first_name} ${teacher.last_name}`,

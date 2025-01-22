@@ -3,7 +3,8 @@ import type {
   Course, 
   Classroom, 
   Schedule, 
-  Attendance 
+  Attendance,
+  Enrollment 
 } from "@/utils/interfaces/collegeInterface";
 import { API_ROUTES } from "@/utils/config/apiRoutes";
 
@@ -12,7 +13,8 @@ const {
   CLASSROOMS_ROUTE, 
   COURSES_ROUTE, 
   SCHEDULES_ROUTE, 
-  ATTENDANCES_ROUTE 
+  ATTENDANCES_ROUTE,
+  ENROLLMENTS_ROUTE 
 } = API_ROUTES;
 
 export const CollegeService = {
@@ -286,5 +288,84 @@ export const CollegeService = {
       console.error(`Error deleting schedule ${scheduleId}:`, error);
       throw error;
     }
-  }
+  },
+
+  /**
+   * ------------------
+   *  ENROLLMENT ENDPOINTS
+   * ------------------
+   */
+  async getEnrollments(): Promise<Enrollment[]> {
+    try {
+      const response = await dispatch.get<Enrollment[]>(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching enrollments:", error);
+      throw error;
+    }
+  },
+
+  async getEnrollment(id: number): Promise<Enrollment> {
+    try {
+      const response = await dispatch.get<Enrollment>(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/${id}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching enrollment ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async createEnrollment(data: { student: number; course: number }): Promise<Enrollment> {
+    try {
+      const response = await dispatch.post<Enrollment>(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating enrollment:", error);
+      throw error;
+    }
+  },
+
+  async updateEnrollment(id: number, data: Partial<Enrollment>): Promise<Enrollment> {
+    try {
+      const response = await dispatch.patch<Enrollment>(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/${id}/`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating enrollment ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async deleteEnrollment(id: number): Promise<void> {
+    try {
+      await dispatch.delete(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/${id}/`);
+    } catch (error) {
+      console.error(`Error deleting enrollment ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Helper methods for specific enrollment scenarios
+  async getStudentEnrollments(studentId: number): Promise<Enrollment[]> {
+    try {
+      const response = await dispatch.get<Enrollment[]>(
+        `${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/?student=${studentId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching enrollments for student ${studentId}:`, error);
+      throw error;
+    }
+  },
+
+  async getCourseEnrollments(courseId: number): Promise<Enrollment[]> {
+    try {
+      const response = await dispatch.get<Enrollment[]>(
+        `${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/?course=${courseId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching enrollments for course ${courseId}:`, error);
+      throw error;
+    }
+  },
 }; 

@@ -37,7 +37,7 @@
             color="error"
             size="small"
             variant="text"
-            @click="removeStudent(item)"
+            @click="removeStudent(item.raw)"
           >
             <v-icon>mdi-account-remove</v-icon>
             Remove
@@ -68,6 +68,7 @@
             variant="text"
             @click="addStudent"
             :loading="loading"
+            :disabled="!selectedStudent"
           >
             Add
           </v-btn>
@@ -81,46 +82,78 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import { useStudentStore } from '@/utils/stores/users/studentStore';
 import type { Course } from '@/utils/interfaces/collegeInterface';
+import type { Student } from '@/utils/interfaces/userInterface';
 
 const route = useRoute();
 const router = useRouter();
 const collegeStore = useCollegeStore();
 const teacherStore = useTeacherStore();
+const studentStore = useStudentStore();
 
 const course = ref<Course | null>(null);
 const loading = ref(false);
 const dialogVisible = ref(false);
 const selectedStudent = ref<number | null>(null);
-const enrolledStudents = ref([]);
-const availableStudents = ref([]);
+
+// Computed properties for better reactivity
+const enrolledStudents = computed(() => {
+  if (!course.value) return [];
+  const enrollments = collegeStore.getEnrollmentsByCourse(course.value.id);
+  return enrollments
+    .map(enrollment => studentStore.studentById(enrollment.student))
+    .filter((student): student is Student => student !== undefined)
+    .map(student => ({
+      ...student,
+      full_name: `${student.first_name} ${student.last_name}`
+    }));
+});
+
+const availableStudents = computed(() => {
+  if (!course.value) return [];
+  const enrolledIds = new Set(
+    collegeStore.getEnrollmentsByCourse(course.value.id)
+      .map(enrollment => enrollment.student)
+  );
+  return studentStore.students
+    .filter(student => !enrolledIds.has(student.id))
+    .map(student => ({
+      ...student,
+      full_name: `${student.first_name} ${student.last_name}`
+    }));
+});
 
 const headers = [
   { title: 'Name', key: 'full_name' },
-  { title: 'Student ID', key: 'student_id' },
+  { title: 'Student ID', key: 'student_number' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' }
 ];
 
-function getTeacherName(teacherId: number | null): string {
+function getTeacherName(teacherId: number | undefined): string {
   if (!teacherId) return 'Not Assigned';
   const teacher = teacherStore.teacherById(teacherId);
   return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
 }
 
-function openAddStudentDialog() {
+async function openAddStudentDialog() {
   selectedStudent.value = null;
+  // Ensure we have the latest student data
+  await studentStore.fetchStudents();
   dialogVisible.value = true;
 }
 
 async function addStudent() {
   if (!selectedStudent.value || !course.value) return;
-  
+
   loading.value = true;
   try {
-    // Add API call to enroll student
-    await collegeStore.enrollStudent(course.value.id, selectedStudent.value);
-    await fetchEnrolledStudents();
+    await collegeStore.createEnrollment({
+      student: selectedStudent.value,
+      course: course.value.id
+    });
+    await collegeStore.fetchCourseEnrollments(course.value.id);
     dialogVisible.value = false;
   } catch (error) {
     console.error('Error enrolling student:', error);
@@ -129,14 +162,18 @@ async function addStudent() {
   }
 }
 
-async function removeStudent(student: any) {
+async function removeStudent(student: Student) {
   if (!course.value || !confirm('Are you sure you want to remove this student from the course?')) return;
 
   loading.value = true;
   try {
-    // Add API call to remove student
-    await collegeStore.removeStudentFromCourse(course.value.id, student.id);
-    await fetchEnrolledStudents();
+    const enrollment = collegeStore.getEnrollmentsByCourse(course.value.id)
+      .find(e => e.student === student.id);
+
+    if (enrollment) {
+      await collegeStore.deleteEnrollment(enrollment.id);
+      await collegeStore.fetchCourseEnrollments(course.value.id);
+    }
   } catch (error) {
     console.error('Error removing student:', error);
   } finally {
@@ -144,41 +181,23 @@ async function removeStudent(student: any) {
   }
 }
 
-async function fetchEnrolledStudents() {
-  if (!course.value) return;
-  
-  loading.value = true;
-  try {
-    // Add API call to get enrolled students
-    enrolledStudents.value = await collegeStore.getCourseStudents(course.value.id);
-  } catch (error) {
-    console.error('Error fetching enrolled students:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function fetchAvailableStudents() {
-  try {
-    // Add API call to get available students
-    availableStudents.value = await collegeStore.getAvailableStudents(course.value?.id);
-  } catch (error) {
-    console.error('Error fetching available students:', error);
-  }
-}
-
-
 onMounted(async () => {
   const courseId = parseInt(route.params.id as string);
+  loading.value = true;
   try {
-    course.value = await collegeStore.getCourseById(courseId);
     await Promise.all([
-      fetchEnrolledStudents(),
-      fetchAvailableStudents(),
+      studentStore.fetchStudents(),
       teacherStore.fetchTeachers()
     ]);
+
+    course.value = await collegeStore.getCourse(courseId);
+    if (course.value) {
+      await collegeStore.fetchCourseEnrollments(course.value.id);
+    }
   } catch (error) {
     console.error('Error loading course details:', error);
+  } finally {
+    loading.value = false;
   }
 });
 </script>

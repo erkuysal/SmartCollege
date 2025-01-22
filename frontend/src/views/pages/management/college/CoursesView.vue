@@ -49,7 +49,7 @@
       <template #item.teacher="{ item }">
         {{ getTeacherName(item.teacher) }}
       </template>
-      
+
       <template #item.actions="{ item }">
         <v-btn
           color="info"
@@ -214,7 +214,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCollegeStore } from '@/utils/stores/collegeStore';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
 import type { Course } from '@/utils/interfaces/collegeInterface';
 
 const collegeStore = useCollegeStore();

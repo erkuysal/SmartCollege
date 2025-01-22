@@ -3,13 +3,13 @@ import DashboardLayout from "@/views/layouts/DashboardLayout.vue";
 
 // Parent Pages
 import DashboardView from '@/views/pages/management/DashboardView.vue'
-import StudentsView from '@/views/pages/management/StudentsView.vue'
-import StaffView from '@/views/pages/management/StaffView.vue'
-import CoursesView from '@/views/pages/management/CoursesView.vue'
-import ClassroomsView from '@/views/pages/management/ClassroomsView.vue'
-import DepartmentsView from '@/views/pages/management/DepartmentsView.vue'
+import StudentsView from '@/views/pages/management/users/StudentsView.vue'
+import StaffView from '@/views/pages/management/users/StaffView.vue'
+import CoursesView from '@/views/pages/management/college/CoursesView.vue'
+import ClassroomsView from '@/views/pages/management/college/ClassroomsView.vue'
+import DepartmentsView from '@/views/pages/management/college/DepartmentsView.vue'
 import TasksView from '@/views/pages/management/TasksView.vue'
-import EventsView from '@/views/pages/management/AttendanceView.vue'
+import EventsView from '@/views/pages/management/college/AttendanceView.vue'
 
 // --------- Child Pages -----
 // -- Actions --

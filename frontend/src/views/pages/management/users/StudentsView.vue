@@ -115,8 +115,8 @@
 <script lang="ts" setup>
 import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useStudentStore } from '@/utils/stores/studentStore';
-import type { Student } from '@/utils/interfaces/studentInterface';
+import { useStudentStore } from '@/utils/stores/users/studentStore';
+import type { Student } from '@/utils/interfaces/users/studentInterface';
 
 // Router and current route
 const router = useRouter();

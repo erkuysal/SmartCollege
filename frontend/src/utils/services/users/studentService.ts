@@ -1,10 +1,34 @@
 import dispatch from "@/utils/dispatcher";
-import type { Student } from "@/utils/interfaces/studentInterface";
+import type { Student } from "@/utils/interfaces/users/studentInterface";
 import { API_ROUTES } from "@/utils/config/apiRoutes";
 
 const { USERS_BASE_URL, STUDENTS_ROUTE } = API_ROUTES;
 
 export const StudentService = {
+  /**
+   * Fetches details of a specific student or all students.
+   * @param studentNumber - The student number to fetch (optional)
+   * @returns A Promise resolving to the Student object or an array of Students
+   */
+  async fetchStudents(studentNumber?: string): Promise<Student | Student[]> {
+    try {
+      if (studentNumber) {
+        // Fetch a specific student
+        const response = await dispatch.get<Student>(
+          `${USERS_BASE_URL}/${STUDENTS_ROUTE}/${studentNumber}/`
+        );
+        return response.data;
+      } else {
+        // Fetch all students
+        const response = await dispatch.get<Student[]>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}/`);
+        return response.data;
+      }
+    } catch (error) {
+      console.error(`Error fetching ${studentNumber ? `student ${studentNumber}` : "students"}:`, error);
+      throw error;
+    }
+  },
+
   /**
    * Creates a new student.
    * @param newStudent - The student data to create
@@ -17,37 +41,6 @@ export const StudentService = {
     } catch (error) {
       console.error("Error creating student:", error);
       throw error;
-    }
-  },
-
-  /**
-   * Fetches all students.
-   * @returns A Promise resolving to an array of Students
-   */
-  async listStudents(): Promise<Student[]> {
-    try {
-      const response = await dispatch.get<Student[]>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Fetches details of a specific student by student_number.
-   * @param student_number - The student number to fetch
-   * @returns A Promise resolving to the Student object
-   */
-  async getStudent(student_number: string): Promise<Student> {
-    try {
-      const response = await dispatch.get<Student>(
-        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${student_number}/`
-      )
-      return response.data
-    } catch (error) {
-      console.error(`Error fetching student ${student_number}:`, error)
-      throw error
     }
   },
 

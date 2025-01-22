@@ -152,8 +152,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useTeacherStore } from '@/utils/stores/teacherStore';
-import type { Teacher } from '@/utils/interfaces/teacherInterface';
+import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import type { Teacher } from '@/utils/interfaces/users/teacherInterface';
 
 const teacherStore = useTeacherStore();
 const teachers = computed(() => teacherStore.teachers);
