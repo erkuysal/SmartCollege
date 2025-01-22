@@ -30,30 +30,16 @@ export const useStudentStore = defineStore('student', {
     /**
      * Fetches all students from the server and updates the state.
      */
-    async listAllStudents() {
+    async fetchStudents(studentNumber?: string) {
       this.loading = true
       this.error = null
       try {
-        this.students = await StudentService.listStudents()
-        console.log('List All Students')
-        console.log(this.students.length)
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Fetches details of a specific student by student_number
-     * and updates the currentStudent state.
-     */
-    async fetchStudentByNumber(student_number: string) {
-      this.loading = true
-      this.error = null
-      this.currentStudent = null
-      try {
-        this.currentStudent = await StudentService.getStudent(student_number)
+        const response = await StudentService.getStudents(studentNumber)
+        if (Array.isArray(response)) {
+          this.students = response
+        } else {
+          this.currentStudent = response
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
       } finally {
@@ -64,14 +50,16 @@ export const useStudentStore = defineStore('student', {
     /**
      * Creates a new student on the server and adds it to the store's state.
      */
-    async addStudent(newStudent: Student) {
+    async addStudent(newStudent: Omit<Student, 'student_number' | 'id'>) {
       this.loading = true
       this.error = null
       try {
         const created = await StudentService.addStudent(newStudent)
         this.students.push(created)
+        return created
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
+        throw err
       } finally {
         this.loading = false
       }
@@ -85,12 +73,17 @@ export const useStudentStore = defineStore('student', {
       this.error = null
       try {
         const updated = await StudentService.updateStudent(studentNumber, updateData)
-        const index = this.students.findIndex((s) => s.student_number === studentNumber)
+        const index = this.students.findIndex(s => s.student_number === studentNumber)
         if (index !== -1) {
           this.students[index] = updated
         }
+        if (this.currentStudent?.student_number === studentNumber) {
+          this.currentStudent = updated
+        }
+        return updated
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
+        throw err
       } finally {
         this.loading = false
       }
@@ -104,9 +97,13 @@ export const useStudentStore = defineStore('student', {
       this.error = null
       try {
         await StudentService.deleteStudent(studentNumber)
-        this.students = this.students.filter((s) => s.student_number !== studentNumber)
+        this.students = this.students.filter(s => s.student_number !== studentNumber)
+        if (this.currentStudent?.student_number === studentNumber) {
+          this.currentStudent = null
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
+        throw err
       } finally {
         this.loading = false
       }
@@ -124,6 +121,7 @@ export const useStudentStore = defineStore('student', {
         this.rfidMessage = response.message
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
+        throw err
       } finally {
         this.loading = false
       }
@@ -132,47 +130,30 @@ export const useStudentStore = defineStore('student', {
     /**
      * Reads RFID data from the card and validates it against the DB.
      */
-    async readRFID(): Promise<string | undefined> {
+    async readRFID() {
       this.loading = true
       this.error = null
       this.rfidMessage = null
       this.rfidStatus = null
       try {
-        const data = await StudentService.readRFID()
-        console.log('RFID data read: ', data)
-
-        // Example if backend returns something like:
-        // { student_number: "S20250003", message: "RFID read successfully", valid: true }
-        const studentNumber = data.student_number
-
-        if (data.message) this.rfidMessage = data.message
-        this.rfidStatus = { valid: data.valid, error: data.error }
-
-        return studentNumber
+        const response = await StudentService.readRFID()
+        if (response.message) this.rfidMessage = response.message
+        this.rfidStatus = { valid: response.valid, error: response.error }
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
+        throw err
       } finally {
         this.loading = false
       }
     },
 
-    async fetchStudents() {
-      this.loading = true;
-      try {
-        const response = await StudentService.getStudents();
-        this.students = response;
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err);
-        throw err;
-      } finally {
-        this.loading = false;
-      }
-    },
-
     resetState() {
-      this.students = [];
-      this.loading = false;
-      this.error = null;
+      this.students = []
+      this.currentStudent = null
+      this.loading = false
+      this.error = null
+      this.rfidMessage = null
+      this.rfidStatus = null
     }
   },
 })

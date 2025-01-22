@@ -10,7 +10,7 @@ export const StudentService = {
    * @param studentNumber - The student number to fetch (optional)
    * @returns A Promise resolving to the Student object or an array of Students
    */
-  async fetchStudents(studentNumber?: string): Promise<Student | Student[]> {
+  async getStudents(studentNumber?: string): Promise<Student | Student[]> {
     try {
       if (studentNumber) {
         // Fetch a specific student
@@ -34,7 +34,7 @@ export const StudentService = {
    * @param newStudent - The student data to create
    * @returns A Promise resolving to the created Student
    */
-  async addStudent(newStudent: Student): Promise<Student> {
+  async addStudent(newStudent: Omit<Student, 'student_number' | 'id'>): Promise<Student> {
     try {
       const response = await dispatch.post<Student>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}/`, newStudent);
       return response.data;

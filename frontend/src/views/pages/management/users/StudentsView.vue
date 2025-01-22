@@ -10,13 +10,13 @@
 
         <v-spacer></v-spacer>
 
-        <v-btn color="primary" @click="navigateToAddStudent">
-          <v-icon >mdi-plus</v-icon>
+        <v-btn color="primary" @click="navigateToAddStudent" class="me-2">
+          <v-icon>mdi-plus</v-icon>
           Add Student
         </v-btn>
 
         <v-btn color="primary" @click="reloadStudents">
-          <v-icon >mdi-refresh</v-icon>
+          <v-icon>mdi-refresh</v-icon>
           Refresh
         </v-btn>
       </v-toolbar>
@@ -56,7 +56,7 @@
 
           <!-- The Data Table -->
           <v-data-table
-            v-if="studentStore.students && studentStore.students.length"
+            v-if="studentStore.students.length"
             :headers="headers"
             :items="studentStore.students"
             :items-per-page="5"
@@ -138,19 +138,19 @@ const headers = ref([
 const childRouteNames = ['addStudent', 'editStudent'];
 
 // Check if the current route is a child route
-const isChildRoute = ref(childRouteNames.includes(route.name));
+const isChildRoute = ref(route.name ? childRouteNames.includes(route.name as string) : false);
 
 // Watch for route changes
 watch(
   () => route.name,
   (newName) => {
-    isChildRoute.value = childRouteNames.includes(newName);
+    isChildRoute.value = newName ? childRouteNames.includes(newName as string) : false;
   }
 );
 
 // Reload students
 async function reloadStudents() {
-  await studentStore.listAllStudents();
+  await studentStore.fetchStudents();
 }
 
 // Navigation
@@ -165,11 +165,22 @@ function editStudent(student: Student) {
 
 async function handleDeleteStudent(student: Student) {
   const confirmed = window.confirm(`Delete student #${student.student_number}?`);
-  if (confirmed) await studentStore.deleteStudent(student.student_number);
+  if (confirmed) {
+    try {
+      await studentStore.deleteStudent(student.student_number);
+      await reloadStudents();
+    } catch (error) {
+      console.error('Failed to delete student:', error);
+    }
+  }
 }
 
 async function handleWriteRFID(student: Student) {
-  await studentStore.writeRFID(student.student_number);
+  try {
+    await studentStore.writeRFID(student.student_number);
+  } catch (error) {
+    console.error('Failed to write RFID:', error);
+  }
 }
 
 // Fetch data on mount

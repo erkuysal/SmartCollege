@@ -2,16 +2,16 @@
   <v-container class="py-5">
     <h1 class="text-h4 mb-4">Add Student</h1>
 
-    <!-- Optional: Display error if something goes wrong -->
     <v-alert
       v-if="store.error"
       type="error"
       class="mb-4"
+      border="start"
+      elevation="2"
     >
       {{ store.error }}
     </v-alert>
 
-    <!-- Optional: Display a loading indicator when submitting -->
     <v-progress-linear
       v-if="store.loading"
       indeterminate
@@ -20,7 +20,7 @@
     />
 
     <v-form
-      ref="studentForm"
+      ref="form"
       @submit.prevent="onSubmit"
     >
       <v-text-field
@@ -44,50 +44,53 @@
         label="Email"
         variant="outlined"
         type="email"
+        required
         class="mb-4"
       />
 
-      <v-btn
-        type="submit"
-        color="primary"
-        :disabled="store.loading"
-        class="me-2"
-      >
-        Add Student
-      </v-btn>
+      <div class="d-flex gap-2">
+        <v-btn
+          type="submit"
+          color="primary"
+          :disabled="store.loading"
+        >
+          Add Student
+        </v-btn>
+
+        <v-btn
+          color="secondary"
+          :disabled="store.loading"
+          @click="router.back()"
+        >
+          Cancel
+        </v-btn>
+      </div>
     </v-form>
   </v-container>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useStudentStore } from '@/utils/stores/users/studentStore'
-import { useRouter } from "vue-router";
 import type { Student } from '@/utils/interfaces/users/studentInterface'
 
 const router = useRouter()
-
-/**
- * Pinia store reference
- */
 const store = useStudentStore()
+const form = ref<any>(null)
 
-/**
- * Reactive student object for binding our form fields
- */
-const newStudent = ref<Student>({
+const newStudent = ref({
   first_name: '',
   last_name: '',
   email: '',
 })
 
-/**
- * onSubmit - calls the Pinia store action to create a new student,
- * then clears the form (optional).
- */
 async function onSubmit() {
   try {
-    await store.addStudent(newStudent.value)
+    if (!form.value?.validate()) return
+
+    await store.addStudent(newStudent.value as Omit<Student, 'student_number'>)
+    
     // Clear form after successful creation
     newStudent.value = {
       first_name: '',
@@ -95,14 +98,15 @@ async function onSubmit() {
       email: '',
     }
 
-    await router.push({ name: 'students' });
+    await router.push({ name: 'students' })
   } catch (error) {
-    // The store action already sets store.error.
-    // Additional handling (e.g., global toast) can go here if needed.
+    console.error('Failed to add student:', error)
   }
 }
 </script>
 
 <style scoped>
-/* You can apply custom styles if needed */
+.gap-2 {
+  gap: 8px;
+}
 </style>
