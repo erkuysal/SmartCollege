@@ -9,7 +9,7 @@
             <div class="text-caption">Total Students</div>
           </v-card-text>
           <v-card-actions>
-            <v-btn variant="text" to="/admin/students">
+            <v-btn variant="text" :to="{ name: 'students' }">
               View Students
               <v-icon right>mdi-arrow-right</v-icon>
             </v-btn>
@@ -24,7 +24,7 @@
             <div class="text-caption">Total Staff</div>
           </v-card-text>
           <v-card-actions>
-            <v-btn variant="text" to="/admin/staff">
+            <v-btn variant="text" :to="{ name: 'staff' }">
               View Staff
               <v-icon right>mdi-arrow-right</v-icon>
             </v-btn>
@@ -39,7 +39,7 @@
             <div class="text-caption">Active Courses</div>
           </v-card-text>
           <v-card-actions>
-            <v-btn variant="text" to="/admin/courses">
+            <v-btn variant="text" :to="{ name: 'courses' }">
               View Courses
               <v-icon right>mdi-arrow-right</v-icon>
             </v-btn>
@@ -54,7 +54,7 @@
             <div class="text-caption">Total Classrooms</div>
           </v-card-text>
           <v-card-actions>
-            <v-btn variant="text" to="/admin/classrooms">
+            <v-btn variant="text" :to="{ name: 'classrooms' }">
               View Classrooms
               <v-icon right>mdi-arrow-right</v-icon>
             </v-btn>
@@ -78,11 +78,11 @@
                   <v-icon>mdi-clock-outline</v-icon>
                 </template>
                 <v-list-item-title>
-                  {{ getCourseTitle(schedule.course) }}
+                  {{ schedule.course.title }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
                   {{ formatTime(schedule.start_time) }} - {{ formatTime(schedule.end_time) }}
-                  | Room: {{ getClassroomName(schedule.classroom) }}
+                  | Room: {{ schedule.classroom.name }}
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -115,31 +115,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useStudentStore } from '@/utils/stores/users/studentStore';
 import { useTeacherStore } from '@/utils/stores/users/teacherStore';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
-import type { Schedule } from '@/utils/interfaces/collegeInterface';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
+import { useClassroomStore } from '@/utils/stores/college/classroomStore';
+import { useScheduleStore } from '@/utils/stores/college/scheduleStore';
+import type { PopulatedSchedule } from '@/utils/interfaces/college/scheduleInterface';
 
 // Store instances
 const studentStore = useStudentStore();
 const teacherStore = useTeacherStore();
-const collegeStore = useCollegeStore();
+const courseStore = useCourseStore();
+const classroomStore = useClassroomStore();
+const scheduleStore = useScheduleStore();
 
 // Computed values for summary cards
 const studentCount = computed(() => studentStore.students.length);
 const teacherCount = computed(() => teacherStore.teachers.length);
-const courseCount = computed(() => collegeStore.courses.length);
-const classroomCount = computed(() => collegeStore.classrooms.length);
+const courseCount = computed(() => courseStore.courses.length);
+const classroomCount = computed(() => classroomStore.classrooms.length);
 
 // Get today's schedules
 const todaySchedules = computed(() => {
   const today = new Date().getDay();
-  return collegeStore.schedules.filter(schedule =>
-    schedule.day_of_week === today
-  ).sort((a, b) =>
-    a.start_time.localeCompare(b.start_time)
-  );
+  return scheduleStore.schedules
+    .filter(schedule => schedule.day_of_week === today)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 });
 
 // Helper functions
@@ -150,23 +152,44 @@ function formatTime(time: string): string {
   });
 }
 
-function getCourseTitle(courseId: number): string {
-  const course = collegeStore.courses.find(c => c.id === courseId);
-  return course?.title || 'Unknown Course';
-}
-
-function getClassroomName(classroomId: number): string {
-  const classroom = collegeStore.classrooms.find(c => c.id === classroomId);
-  return classroom?.name || 'Unknown Room';
-}
-
-// Quick actions
+// Quick actions with correct route names
 const quickActions = [
-  { title: 'Add New Student', icon: 'mdi-account-plus', route: '/admin/students/add' },
-  { title: 'Add New Course', icon: 'mdi-book-plus', route: '/admin/courses/add' },
-  { title: 'Take Attendance', icon: 'mdi-clipboard-check', route: '/admin/attendance/new' },
-  { title: 'View Reports', icon: 'mdi-chart-box', route: '/admin/reports' },
+  { 
+    title: 'Add New Student', 
+    icon: 'mdi-account-plus', 
+    route: { name: 'students', query: { action: 'add' } }
+  },
+  { 
+    title: 'Add New Course', 
+    icon: 'mdi-book-plus', 
+    route: { name: 'courses', query: { action: 'add' } }
+  },
+  { 
+    title: 'Take Attendance', 
+    icon: 'mdi-clipboard-check', 
+    route: { name: 'events' }
+  },
+  { 
+    title: 'View Reports', 
+    icon: 'mdi-chart-box', 
+    route: { name: 'dashboard' }
+  }
 ];
+
+// Initial data loading
+onMounted(async () => {
+  try {
+    await Promise.all([
+      studentStore.fetchStudents(),
+      teacherStore.fetchTeachers(),
+      courseStore.fetchCourses(),
+      classroomStore.fetchClassrooms(),
+      scheduleStore.fetchSchedules()
+    ]);
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+  }
+});
 </script>
 
 <style scoped>

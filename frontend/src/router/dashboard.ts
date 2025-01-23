@@ -23,7 +23,9 @@ import CourseDetails from "@/views/pages/details/CourseDetails.vue";
 // Optional: If you have a login or public pages, import them here
 // import LoginView from '@/views/LoginView.vue'
 
-const dashboardRoutes = [
+import type { RouteRecordRaw } from 'vue-router';
+
+const dashboardRoutes: RouteRecordRaw[] = [
   // Example: if you have a public login
   // { path: '/login', name: 'login', component: LoginView },
 

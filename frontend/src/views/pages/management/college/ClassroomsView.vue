@@ -21,12 +21,22 @@
       </v-btn>
     </v-toolbar>
 
+    <!-- Error Alert -->
+    <v-alert
+      v-if="classroomStore.error"
+      type="error"
+      class="mt-4"
+      closable
+    >
+      {{ classroomStore.error }}
+    </v-alert>
+
     <!-- Table View -->
     <v-data-table
       v-if="viewMode === 'table' && !showingDetails"
       :headers="headers"
-      :items="collegeStore.classrooms"
-      :loading="collegeStore.loading"
+      :items="classroomStore.classrooms"
+      :loading="classroomStore.loading"
     >
       <template #item.actions="{ item }">
         <v-btn
@@ -54,7 +64,7 @@
     <!-- Card View -->
     <v-row v-else-if="!showingDetails">
       <v-col
-        v-for="classroom in collegeStore.classrooms"
+        v-for="classroom in classroomStore.classrooms"
         :key="classroom.id"
         cols="12"
         sm="6"
@@ -107,24 +117,84 @@
         </v-card>
       </template>
     </router-view>
+
+    <!-- Add/Edit Classroom Dialog -->
+    <v-dialog v-model="dialogVisible" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="text-h5">{{ editingClassroom ? 'Edit Classroom' : 'New Classroom' }}</span>
+        </v-card-title>
+
+        <v-card-text>
+          <v-form ref="form" v-model="isValid">
+            <v-text-field
+              v-model="formData.name"
+              label="Classroom Name"
+              :rules="[v => !!v || 'Name is required']"
+              required
+            ></v-text-field>
+
+            <v-text-field
+              v-model.number="formData.capacity"
+              label="Capacity"
+              type="number"
+              :rules="[
+                v => !!v || 'Capacity is required',
+                v => v > 0 || 'Capacity must be greater than 0'
+              ]"
+              required
+            ></v-text-field>
+
+            <v-text-field
+              v-model="formData.building"
+              label="Building"
+            ></v-text-field>
+          </v-form>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="error"
+            variant="text"
+            @click="closeDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="text"
+            @click="saveClassroom"
+            :loading="classroomStore.loading"
+            :disabled="!isValid"
+          >
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
-import type { Classroom } from '@/utils/interfaces/collegeInterface';
+import { useClassroomStore } from '@/utils/stores/college/classroomStore';
+import type { Classroom } from '@/utils/interfaces/college/classroomInterface';
 
 const router = useRouter();
-const collegeStore = useCollegeStore();
+const classroomStore = useClassroomStore();
 
 // State
 const viewMode = ref<'table' | 'card'>('table');
 const selectedClassroom = ref<Classroom | null>(null);
 const showingDetails = ref(false);
+const dialogVisible = ref(false);
+const editingClassroom = ref<Classroom | null>(null);
+const isValid = ref(false);
+const form = ref<null | { resetValidation: () => void }>(null);
 
-// Headers for data table
+// Table headers
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Capacity', key: 'capacity' },
@@ -132,17 +202,39 @@ const headers = [
   { title: 'Actions', key: 'actions', sortable: false }
 ];
 
+// Form data
+interface ClassroomFormData {
+  name: string;
+  capacity: number;
+  building: string;
+}
+
+const formData = ref<ClassroomFormData>({
+  name: '',
+  capacity: 0,
+  building: ''
+});
+
 // Methods
-function viewClassroomDetails(classroom: Classroom) {
-  selectedClassroom.value = classroom;
-  showingDetails.value = true;
-  router.push(`/admin/classrooms/${classroom.id}/details`);
+async function viewClassroomDetails(classroom: Classroom) {
+  try {
+    selectedClassroom.value = classroom;
+    showingDetails.value = true;
+    await classroomStore.fetchClassroomSchedules(classroom.id);
+    router.push({
+      name: 'classroom-details',
+      params: { id: classroom.id }
+    });
+  
+  } catch (error) {
+    console.error('Error loading classroom details:', error);
+  }
 }
 
 function closeDetails() {
   showingDetails.value = false;
   selectedClassroom.value = null;
-  router.push('/admin/classrooms');
+  router.push({ name: 'classrooms' });
 }
 
 function toggleViewMode() {
@@ -152,7 +244,7 @@ function toggleViewMode() {
 async function deleteClassroom(classroom: Classroom) {
   if (confirm('Are you sure you want to delete this classroom?')) {
     try {
-      await collegeStore.deleteClassroom(classroom.id);
+      await classroomStore.deleteClassroom(classroom.id);
     } catch (error) {
       console.error('Error deleting classroom:', error);
     }
@@ -160,12 +252,53 @@ async function deleteClassroom(classroom: Classroom) {
 }
 
 function openAddClassroomDialog() {
-  selectedClassroom.value = null;
+  editingClassroom.value = null;
+  resetForm();
   dialogVisible.value = true;
+}
+
+function closeDialog() {
+  dialogVisible.value = false;
+  resetForm();
+}
+
+function resetForm() {
+  formData.value = {
+    name: '',
+    capacity: 0,
+    building: ''
+  };
+  if (form.value) {
+    form.value.resetValidation();
+  }
+}
+
+async function saveClassroom() {
+  if (!isValid.value) return;
+
+  try {
+    if (editingClassroom.value) {
+      await classroomStore.updateClassroom(editingClassroom.value.id, formData.value);
+    } else {
+      await classroomStore.createClassroom(formData.value);
+    }
+    closeDialog();
+  } catch (error) {
+    console.error('Error saving classroom:', error);
+  }
 }
 
 // Lifecycle
 onMounted(async () => {
-  await collegeStore.fetchClassrooms();
+  try {
+    await classroomStore.fetchClassrooms();
+  } catch (error) {
+    console.error('Error loading classrooms:', error);
+    classroomStore.resetState();
+  }
+});
+
+onUnmounted(() => {
+  classroomStore.resetState();
 });
 </script>

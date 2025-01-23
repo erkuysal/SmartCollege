@@ -30,20 +30,20 @@
 
     <!-- Error Alert -->
     <v-alert
-      v-if="collegeStore.error"
+      v-if="courseStore.error"
       type="error"
       class="mt-4"
       closable
     >
-      {{ collegeStore.error }}
+      {{ courseStore.error }}
     </v-alert>
 
     <!-- Table View -->
     <v-data-table
       v-if="viewType === 'table'"
       :headers="headers"
-      :items="collegeStore.courses"
-      :loading="collegeStore.loading"
+      :items="courseStore.courses"
+      :loading="courseStore.loading"
       class="mt-4"
     >
       <template #item.teacher="{ item }">
@@ -86,7 +86,7 @@
     <!-- Card View -->
     <v-row v-else class="mt-4">
       <v-col
-        v-for="course in collegeStore.courses"
+        v-for="course in courseStore.courses"
         :key="course.id"
         cols="12"
         sm="6"
@@ -177,13 +177,11 @@
                     required
                     :rules="[v => !!v || 'Teacher is required']"
                   >
-                    <template #item="{ props, item }">
-                      <v-list-item v-bind="props">
-                        {{ item.raw.first_name }} {{ item.raw.last_name }}
-                      </v-list-item>
+                    <template #item="{ item }">
+                      {{ item.raw.first_name }} {{ item.raw.last_name }}
                     </template>
                     <template #selection="{ item }">
-                      {{ item.first_name }} {{ item.last_name }}
+                      {{ item.raw.first_name }} {{ item.raw.last_name }}
                     </template>
                   </v-select>
                 </v-col>
@@ -199,7 +197,7 @@
             color="primary"
             variant="text"
             @click="saveCourse"
-            :loading="collegeStore.loading"
+            :loading="courseStore.loading"
             :disabled="!isValid"
           >
             Save
@@ -213,13 +211,21 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
 import { useTeacherStore } from '@/utils/stores/users/teacherStore';
-import type { Course } from '@/utils/interfaces/collegeInterface';
+import type { Course, PopulatedCourse } from '@/utils/interfaces/college/courseInterface';
 
-const collegeStore = useCollegeStore();
+const courseStore = useCourseStore();
 const teacherStore = useTeacherStore();
 const router = useRouter();
+
+// Table headers
+const headers = [
+  { title: 'Course Code', key: 'title', sortable: true },
+  { title: 'Description', key: 'description', sortable: true },
+  { title: 'Teacher', key: 'teacher', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false }
+];
 
 // State
 const dialogVisible = ref(false);
@@ -231,22 +237,17 @@ const viewType = ref('table');
 const formData = ref({
   title: '',
   description: '',
-  teacher: null as number | null
+  teacher: undefined as number | undefined
 });
 
-// Table headers
-const headers = [
-  { title: 'Course Code', key: 'title', align: 'start' },
-  { title: 'Description', key: 'description' },
-  { title: 'Teacher', key: 'teacher' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' }
-];
-
 // Methods
-function getTeacherName(teacherId: number | null): string {
-  if (!teacherId) return 'Not Assigned';
-  const teacher = teacherStore.teacherById(teacherId);
-  return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
+function getTeacherName(teacher: number | { id: number; first_name: string; last_name: string; email: string; } | undefined): string {
+  if (!teacher) return 'Not Assigned';
+  if (typeof teacher === 'number') {
+    const teacherData = teacherStore.teacherById(teacher);
+    return teacherData ? `${teacherData.first_name} ${teacherData.last_name}` : 'Unknown Teacher';
+  }
+  return `${teacher.first_name} ${teacher.last_name}`;
 }
 
 function openAddCourseDialog() {
@@ -255,12 +256,17 @@ function openAddCourseDialog() {
   dialogVisible.value = true;
 }
 
-function editCourse(course: Course) {
-  editingCourse.value = course;
+function editCourse(course: Course | PopulatedCourse) {
+  editingCourse.value = {
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    teacher: typeof course.teacher === 'number' ? course.teacher : course.teacher?.id
+  };
   formData.value = {
     title: course.title,
     description: course.description || '',
-    teacher: course.teacher
+    teacher: typeof course.teacher === 'number' ? course.teacher : course.teacher?.id
   };
   dialogVisible.value = true;
 }
@@ -270,13 +276,13 @@ async function saveCourse() {
 
   try {
     if (editingCourse.value) {
-      await collegeStore.updateCourse(editingCourse.value.id, {
+      await courseStore.updateCourse(editingCourse.value.id, {
         title: formData.value.title,
         description: formData.value.description,
         teacher: formData.value.teacher
       });
     } else {
-      await collegeStore.addCourse({
+      await courseStore.createCourse({
         title: formData.value.title,
         description: formData.value.description,
         teacher: formData.value.teacher!
@@ -288,10 +294,10 @@ async function saveCourse() {
   }
 }
 
-async function deleteCourse(course: Course) {
+async function deleteCourse(course: Course | PopulatedCourse) {
   if (confirm('Are you sure you want to delete this course?')) {
     try {
-      await collegeStore.deleteCourse(course.id);
+      await courseStore.deleteCourse(course.id);
     } catch (error) {
       console.error('Error deleting course:', error);
     }
@@ -307,14 +313,14 @@ function resetForm() {
   formData.value = {
     title: '',
     description: '',
-    teacher: null
+    teacher: undefined
   };
   if (form.value) {
     form.value.resetValidation();
   }
 }
 
-function viewCourseDetails(course: Course) {
+function viewCourseDetails(course: Course | PopulatedCourse) {
   router.push({
     name: 'course-details',
     params: { id: course.id }
@@ -325,11 +331,13 @@ function viewCourseDetails(course: Course) {
 onMounted(async () => {
   try {
     await Promise.all([
-      collegeStore.fetchCourses(),
+      courseStore.fetchCourses(),
       teacherStore.fetchTeachers()
     ]);
   } catch (error) {
     console.error('Error loading data:', error);
+    courseStore.resetState();
+    teacherStore.resetState();
   }
 });
 </script>

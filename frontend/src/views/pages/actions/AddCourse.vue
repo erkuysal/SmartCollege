@@ -70,7 +70,7 @@
           color="primary"
           variant="text"
           @click="saveCourse"
-          :loading="collegeStore.isLoading"
+          :loading="courseStore.loading"
           :disabled="!isValid"
         >
           Save
@@ -84,10 +84,11 @@
 import { ref, computed, watch } from 'vue';
 import type { PropType } from 'vue';
 import { useTeacherStore } from '@/utils/stores/users/teacherStore';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
-import type { Course, CourseFormData } from '@/utils/interfaces/collegeInterface';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
+import type { Course } from '@/utils/interfaces/college/courseInterface';
+import type { Teacher } from '@/utils/interfaces/users/teacherInterface';
 
-// Props
+// Props and emits
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -99,20 +100,19 @@ const props = defineProps({
   }
 });
 
-// Emits
 const emit = defineEmits(['update:modelValue', 'saved']);
 
 // Store instances
 const teacherStore = useTeacherStore();
-const collegeStore = useCollegeStore();
+const courseStore = useCourseStore();
 
 // Form state
 const form = ref<any>(null);
 const isValid = ref(false);
-const formData = ref<CourseFormData>({
+const formData = ref({
   title: '',
   description: '',
-  teacher: undefined
+  teacher: undefined as number | undefined
 });
 
 // Computed
@@ -159,9 +159,9 @@ async function saveCourse() {
 
   try {
     if (props.editingCourse) {
-      await collegeStore.updateCourse(props.editingCourse.id, formData.value);
+      await courseStore.updateCourse(props.editingCourse.id, formData.value);
     } else {
-      await collegeStore.createCourse(formData.value);
+      await courseStore.createCourse(formData.value);
     }
     emit('saved');
     closeDialog();

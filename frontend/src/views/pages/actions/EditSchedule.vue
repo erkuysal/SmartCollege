@@ -13,7 +13,7 @@
               <v-col cols="12" md="6">
                 <v-select
                   v-model="formData.course"
-                  :items="collegeStore.courses"
+                  :items="courseStore.courses"
                   label="Course"
                   item-title="title"
                   item-value="id"
@@ -100,7 +100,7 @@
           color="primary"
           variant="text"
           @click="saveSchedule"
-          :loading="collegeStore.isLoading"
+          :loading="scheduleStore.loading"
           :disabled="!isValid"
         >
           Save
@@ -111,11 +111,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import type { PropType } from 'vue';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
-import type { Schedule } from '@/utils/interfaces/collegeInterface';
-import { DAY_OF_WEEK } from '@/utils/interfaces/collegeInterface';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
+import { useScheduleStore } from '@/utils/stores/college/scheduleStore';
+import type { Schedule } from '@/utils/interfaces/college/scheduleInterface';
+import { DAY_OF_WEEK } from '@/utils/interfaces/college/scheduleInterface';
 
 // Props
 const props = defineProps({
@@ -136,11 +137,12 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:modelValue', 'saved']);
 
-// Store instance
-const collegeStore = useCollegeStore();
+// Store instances
+const courseStore = useCourseStore();
+const scheduleStore = useScheduleStore();
 
 // Form state
-const form = ref<any>(null);
+const form = ref<null | { resetValidation: () => void }>(null);
 const isValid = ref(false);
 const formData = ref<Omit<Schedule, 'id'>>({
   course: 0,
@@ -206,9 +208,9 @@ async function saveSchedule() {
 
   try {
     if (props.editingSchedule) {
-      await collegeStore.updateSchedule(props.editingSchedule.id, formData.value);
+      await scheduleStore.updateSchedule(props.editingSchedule.id, formData.value);
     } else {
-      await collegeStore.createSchedule(formData.value);
+      await scheduleStore.createSchedule(formData.value);
     }
     emit('saved');
     closeDialog();
@@ -221,4 +223,13 @@ function closeDialog() {
   dialogModel.value = false;
   resetForm();
 }
+
+// Load courses on mount
+onMounted(async () => {
+  try {
+    await courseStore.fetchCourses();
+  } catch (error) {
+    console.error('Error loading courses:', error);
+  }
+});
 </script> 

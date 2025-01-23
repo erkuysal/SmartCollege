@@ -13,14 +13,11 @@ export const CourseService = {
   async fetchCourses(id?: number): Promise<Course[] | PopulatedCourse> {
     try {
       if (id) {
-        const response = await dispatch.get<PopulatedCourse>(
-          `${COLLEGE_BASE_URL}/${COURSES_ROUTE}/${id}/`
-        );
-        return response.data;
-      } else {
-        const response = await dispatch.get<Course[]>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/`);
+        const response = await dispatch.get<PopulatedCourse>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/${id}/`);
         return response.data;
       }
+      const response = await dispatch.get<Course[]>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/`);
+      return response.data;
     } catch (error) {
       console.error(`Error fetching ${id ? `course ${id}` : 'courses'}:`, error);
       throw error;

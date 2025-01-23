@@ -99,12 +99,16 @@ import { useRouter, useRoute } from 'vue-router';
 import { useDisplay } from 'vuetify';
 import { useStudentStore } from "@/utils/stores/users/studentStore";
 import { useTeacherStore } from "@/utils/stores/users/teacherStore";
-import { useCollegeStore } from "@/utils/stores/collegeStore";
+import { useCourseStore } from "@/utils/stores/college/courseStore";
+import { useClassroomStore } from "@/utils/stores/college/classroomStore";
+import { useScheduleStore } from "@/utils/stores/college/scheduleStore";
 
 // Store instances
 const studentStore = useStudentStore();
 const teacherStore = useTeacherStore();
-const collegeStore = useCollegeStore();
+const courseStore = useCourseStore();
+const classroomStore = useClassroomStore();
+const scheduleStore = useScheduleStore();
 
 // Router
 const router = useRouter();
@@ -174,14 +178,20 @@ async function handleReadRFID() {
 onMounted(async () => {
   try {
     await Promise.all([
-      collegeStore.fetchClassrooms(),
-      collegeStore.fetchCourses(),
-    //collegeStore.fetchSchedules(),
+      classroomStore.fetchClassrooms(),
+      courseStore.fetchCourses(),
+      scheduleStore.fetchSchedules(),
       teacherStore.fetchTeachers(),
-      studentStore.listAllStudents()
+      studentStore.fetchStudents()
     ]);
   } catch (error) {
     console.error('Error loading initial data:', error);
+    // Reset states in case of error
+    classroomStore.resetState();
+    courseStore.resetState();
+    scheduleStore.resetState();
+    teacherStore.resetState();
+    studentStore.resetState();
   }
 });
 </script>

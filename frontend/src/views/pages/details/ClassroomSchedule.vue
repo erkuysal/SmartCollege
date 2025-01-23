@@ -23,23 +23,23 @@
         <v-btn
           icon
           size="small"
-          @click="() => collegeStore.fetchClassroomSchedule(classroomId)"
+          @click="() => scheduleStore.fetchSchedules({ classroom: classroomId })"
         >
           <v-icon>mdi-refresh</v-icon>
         </v-btn>
       </v-toolbar>
 
       <v-progress-linear
-        v-if="collegeStore.loading"
+        v-if="scheduleStore.loading"
         indeterminate
       ></v-progress-linear>
 
       <v-alert
-        v-if="collegeStore.error"
+        v-if="scheduleStore.error"
         type="error"
         class="ma-2"
       >
-        {{ collegeStore.error }}
+        {{ scheduleStore.error }}
       </v-alert>
 
       <div class="schedule-wrapper">
@@ -54,7 +54,7 @@
 
           <!-- Day Columns -->
           <div
-            v-for="day in [0,1,2,3,4,5,6]"
+            v-for="day in weekDays"
             :key="day"
             class="day-column"
             :class="{ 'weekend': day > 4 }"
@@ -69,7 +69,7 @@
                   'dragging': isDragging && draggedSchedule?.id === getScheduleForTimeSlot(day, time)?.id,
                   'edit-mode': isEditMode
                 }"
-                @click="!isEditMode && openScheduleDialog(day, time, getScheduleForTimeSlot(day, time))"
+                @click="!isEditMode && handleCellClick(day, time)"
                 @dragover="handleDragOver(day, time, $event)"
                 @drop="handleDrop(day, time, $event)"
               >
@@ -114,7 +114,7 @@
                 <v-col cols="12">
                   <v-select
                     v-model="formData.course"
-                    :items="collegeStore.courses"
+                    :items="courseStore.courses"
                     item-title="title"
                     item-value="id"
                     label="Course"
@@ -188,7 +188,7 @@
             color="primary"
             variant="text"
             @click="saveSchedule"
-            :loading="collegeStore.loading"
+            :loading="scheduleStore.loading"
             :disabled="!isValid"
           >
             Save
@@ -200,33 +200,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
+import { useClassroomStore } from '@/utils/stores/college/classroomStore';
+import { useScheduleStore } from '@/utils/stores/college/scheduleStore';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
 import { useTeacherStore } from '@/utils/stores/users/teacherStore';
-import type { Schedule, Course } from '@/utils/interfaces/collegeInterface';
+import type { Schedule } from '@/utils/interfaces/college/scheduleInterface';
+import EditSchedule from '@/views/pages/actions/EditSchedule.vue';
 import { useStorage } from '@vueuse/core';
+import { DAY_OF_WEEK } from '@/utils/interfaces/college/scheduleInterface';
 
 const route = useRoute();
 const classroomId = Number(route.params.id);
-const collegeStore = useCollegeStore();
+
+// Store instances
+const classroomStore = useClassroomStore();
+const scheduleStore = useScheduleStore();
+const courseStore = useCourseStore();
 const teacherStore = useTeacherStore();
+
+// Constants
+const weekDays = [0, 1, 2, 3, 4, 5, 6]; // Monday to Sunday
 
 // State
 const dialogVisible = ref(false);
-const selectedTimeSlot = ref<{ day: number; time: string } | null>(null);
 const editingSchedule = ref<Schedule | null>(null);
 const isValid = ref(false);
 const form = ref<any>(null);
+const isEditMode = useStorage('classroom-schedule-edit-mode', false);
+const isDragging = ref(false);
+const dragStartTime = ref('');
+const dragStartDay = ref(0);
+const draggedSchedule = ref<Schedule | null>(null);
 
 // Form data
 const formData = ref({
-  course: null as number | null,
+  course: 0,
+  classroom: classroomId,
+  day_of_week: 0,
   start_time: '',
   end_time: '',
   start_date: '',
-  end_date: '',
-  day_of_week: 0
+  end_date: ''
 });
 
 // Time slots generation (8:00 AM to 6:00 PM in 30-minute intervals)
@@ -239,45 +255,18 @@ const timeSlots = computed(() => {
   return slots;
 });
 
-// Add edit mode state
-const isEditMode = ref(false);
-const isDragging = ref(false);
-const dragStartTime = ref('');
-const dragStartDay = ref(0);
-const draggedSchedule = ref<Schedule | null>(null);
-
-// Persistent storage for schedule state
-const savedScheduleState = useStorage('classroom-schedule', {
-  schedules: [] as Schedule[]
-});
-
-// Initialize data
-onMounted(async () => {
-  try {
-    await Promise.all([
-      collegeStore.fetchCourses(),
-      teacherStore.fetchTeachers(),
-      collegeStore.fetchClassroomSchedule(classroomId)
-    ]);
-
-    // Restore saved state if exists
-    if (savedScheduleState.value.schedules.length > 0) {
-      collegeStore.schedules = savedScheduleState.value.schedules;
-    }
-  } catch (err) {
-    console.error('Error loading data:', err);
-  }
-});
-
-// Watch for schedule changes and save state
-watch(() => collegeStore.schedules, (newSchedules) => {
-  savedScheduleState.value.schedules = newSchedules;
-}, { deep: true });
-
 // Helper functions
 function getDayName(day: number): string {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  return days[day];
+  const days = {
+    0: 'Monday',
+    1: 'Tuesday',
+    2: 'Wednesday',
+    3: 'Thursday',
+    4: 'Friday',
+    5: 'Saturday',
+    6: 'Sunday'
+  };
+  return days[day as keyof typeof days] || 'Unknown';
 }
 
 function formatTime(time: string): string {
@@ -292,94 +281,46 @@ function shouldShowFullTime(time: string): boolean {
 }
 
 function getScheduleForTimeSlot(day: number, time: string): Schedule | null {
-  return collegeStore.schedules.find(s =>
+  return scheduleStore.schedules.find(s =>
     s.day_of_week === day &&
-    s.start_time === time
+    s.start_time <= time &&
+    s.end_time > time &&
+    s.classroom === classroomId
   ) || null;
 }
 
-function getCourseDetails(courseId: number | null): string {
+function getCourseDetails(courseId: number | null | undefined): string {
   if (!courseId) return 'No Course';
-  const course = collegeStore.getCourseById(courseId);
+  const course = courseStore.getCourseById(courseId);
   if (!course) return 'Unknown Course';
   const teacher = teacherStore.teacherById(course.teacher);
   return `${course.title} - ${teacher ? `${teacher.first_name} ${teacher.last_name}` : 'No Teacher'}`;
 }
 
-// Dialog functions
-function openScheduleDialog(day: number, time: string, schedule?: Schedule) {
-  selectedTimeSlot.value = { day, time };
-  editingSchedule.value = schedule || null;
-
-  if (schedule) {
-    formData.value = {
-      course: schedule.course,
-      start_time: schedule.start_time,
-      end_time: schedule.end_time,
-      start_date: schedule.start_date,
-      end_date: schedule.end_date,
-      day_of_week: schedule.day_of_week
-    };
-  } else {
-    formData.value = {
-      course: null,
-      start_time: time,
-      end_time: time.replace(':00:', ':50:'), // Default 50-minute lesson
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(new Date().setMonth(new Date().getMonth() + 4)).toISOString().split('T')[0],
-      day_of_week: day
-    };
-  }
-
+// Event handlers
+function handleCellClick(day: number, time: string) {
+  const existingSchedule = getScheduleForTimeSlot(day, time);
+  editingSchedule.value = existingSchedule;
   dialogVisible.value = true;
 }
 
-async function saveSchedule() {
-  if (!isValid.value || !selectedTimeSlot.value) return;
+function toggleEditMode() {
+  isEditMode.value = !isEditMode.value;
+}
 
+async function refreshSchedule() {
   try {
-    const scheduleData = {
-      ...formData.value,
-      classroom: classroomId,
-      course: formData.value.course!
-    };
-
-    if (editingSchedule.value) {
-      await collegeStore.updateSchedule(editingSchedule.value.id, scheduleData);
-    } else {
-      await collegeStore.addSchedule(scheduleData);
-    }
-    closeDialog();
+    await scheduleStore.fetchSchedules({ classroom: classroomId });
   } catch (error) {
-    console.error('Error saving schedule:', error);
+    console.error('Error refreshing schedules:', error);
   }
 }
 
-async function deleteSchedule(schedule: Schedule) {
-  if (confirm('Are you sure you want to delete this schedule?')) {
-    try {
-      await collegeStore.deleteSchedule(schedule.id);
-    } catch (error) {
-      console.error('Error deleting schedule:', error);
-    }
-  }
+function onScheduleSaved() {
+  refreshSchedule();
 }
 
-function closeDialog() {
-  dialogVisible.value = false;
-  selectedTimeSlot.value = null;
-  editingSchedule.value = null;
-  formData.value = {
-    course: null,
-    start_time: '',
-    end_time: '',
-    start_date: '',
-    end_date: '',
-    day_of_week: 0
-  };
-}
-
-// Drag handlers
+// Drag and drop handlers
 function handleDragStart(schedule: Schedule, day: number, time: string, e: DragEvent) {
   if (!isEditMode.value || !(e.target instanceof HTMLElement)) return;
 
@@ -397,45 +338,59 @@ function handleDragOver(day: number, time: string, e: DragEvent) {
   e.dataTransfer!.dropEffect = 'move';
 }
 
-function handleDrop(day: number, time: string, e: DragEvent) {
+async function handleDrop(day: number, time: string, e: DragEvent) {
   e.preventDefault();
   if (!isEditMode.value || !isDragging.value || !draggedSchedule.value) return;
 
-  const updatedSchedule = {
-    ...draggedSchedule.value,
-    day_of_week: day,
-    start_time: time,
-    end_time: calculateNewTime(time, calculateTimeDifference(draggedSchedule.value.start_time, draggedSchedule.value.end_time))
-  };
+  try {
+    const timeDiff = calculateTimeDifference(
+      draggedSchedule.value.start_time,
+      draggedSchedule.value.end_time
+    );
 
-  collegeStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
-  isDragging.value = false;
-  draggedSchedule.value = null;
-}
+    const updatedSchedule: Partial<Schedule> = {
+      ...draggedSchedule.value,
+      day_of_week: day,
+      start_time: time,
+      end_time: calculateNewTime(time, timeDiff)
+    };
 
-function toggleEditMode() {
-  isEditMode.value = !isEditMode.value;
+    await scheduleStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
+    await refreshSchedule();
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+  } finally {
+    isDragging.value = false;
+    draggedSchedule.value = null;
+  }
 }
 
 async function handleDragEnd(e: DragEvent) {
-  if (isDragging.value && draggedSchedule.value) {
-    const timeSlotDiff = calculateTimeDifference(dragStartTime.value, draggedSchedule.value.end_time);
+  if (!isDragging.value || !draggedSchedule.value) return;
 
-    try {
-      await collegeStore.updateSchedule(draggedSchedule.value.id, {
-        ...draggedSchedule.value,
-        start_time: dragStartTime.value,
-        end_time: calculateNewTime(draggedSchedule.value.end_time, timeSlotDiff)
-      });
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-    }
+  try {
+    const timeDiff = calculateTimeDifference(
+      dragStartTime.value,
+      draggedSchedule.value.end_time
+    );
+
+    const updatedSchedule: Partial<Schedule> = {
+      ...draggedSchedule.value,
+      start_time: dragStartTime.value,
+      end_time: calculateNewTime(draggedSchedule.value.end_time, timeDiff)
+    };
+
+    await scheduleStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
+    await refreshSchedule();
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+  } finally {
+    isDragging.value = false;
+    draggedSchedule.value = null;
   }
-
-  isDragging.value = false;
-  draggedSchedule.value = null;
 }
 
+// Utility functions
 function calculateNewTime(time: string, diffInSlots: number): string {
   const date = new Date(`2000-01-01T${time}`);
   date.setMinutes(date.getMinutes() + (diffInSlots * 30));
@@ -446,6 +401,53 @@ function calculateTimeDifference(startTime: string, endTime: string): number {
   const start = new Date(`2000-01-01T${startTime}`);
   const end = new Date(`2000-01-01T${endTime}`);
   return Math.round((end.getTime() - start.getTime()) / (30 * 60 * 1000));
+}
+
+// Lifecycle hooks
+onMounted(async () => {
+  try {
+    await Promise.all([
+      courseStore.fetchCourses(),
+      teacherStore.fetchTeachers(),
+      scheduleStore.fetchSchedules({ classroom: classroomId })
+    ]);
+  } catch (error) {
+    console.error('Error loading initial data:', error);
+    scheduleStore.resetState();
+    courseStore.resetState();
+    teacherStore.resetState();
+  }
+});
+
+onUnmounted(() => {
+  scheduleStore.resetState();
+  courseStore.resetState();
+  teacherStore.resetState();
+});
+
+async function deleteSchedule(schedule: Schedule | null) {
+  if (!schedule || !confirm('Are you sure you want to delete this schedule?')) return;
+
+  try {
+    await scheduleStore.deleteSchedule(schedule.id);
+    closeDialog();
+  } catch (error) {
+    console.error('Error deleting schedule:', error);
+  }
+}
+
+function closeDialog() {
+  dialogVisible.value = false;
+  editingSchedule.value = null;
+  formData.value = {
+    course: 0,
+    classroom: classroomId,
+    day_of_week: 0,
+    start_time: '',
+    end_time: '',
+    start_date: '',
+    end_date: ''
+  };
 }
 </script>
 

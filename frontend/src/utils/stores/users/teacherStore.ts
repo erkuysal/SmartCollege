@@ -85,6 +85,12 @@ export const useTeacherStore = defineStore('teacherStore', {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    resetState() {
+      this.teachers = []
+      this.isLoading = false
+      this.error = null
     }
   }
 });

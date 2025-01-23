@@ -130,7 +130,7 @@ export const useStudentStore = defineStore('student', {
     /**
      * Reads RFID data from the card and validates it against the DB.
      */
-    async readRFID() {
+    async readRFID(): Promise<string | undefined> {
       this.loading = true
       this.error = null
       this.rfidMessage = null
@@ -139,6 +139,7 @@ export const useStudentStore = defineStore('student', {
         const response = await StudentService.readRFID()
         if (response.message) this.rfidMessage = response.message
         this.rfidStatus = { valid: response.valid, error: response.error }
+        return response.student_number
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
         throw err

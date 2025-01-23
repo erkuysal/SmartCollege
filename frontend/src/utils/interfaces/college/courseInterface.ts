@@ -5,12 +5,23 @@ export interface Course {
   id: number;
   title: string;
   description?: string;
-  teacher?: number;
+  teacher?: number;  // Unpopulated: just the ID
 }
 
 export interface PopulatedCourse extends Omit<Course, 'teacher'> {
-  teacher?: Teacher;
-  students?: Student[];
+  teacher?: {        // Populated: full teacher object
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  students?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    student_number: string;
+  }[];
 }
 
 export interface Enrollment {

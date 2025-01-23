@@ -4,7 +4,7 @@ import type { Course, PopulatedCourse, Enrollment, PopulatedEnrollment } from '@
 
 export const useCourseStore = defineStore('course', {
   state: () => ({
-    courses: [] as Course[],
+    courses: [] as (Course | PopulatedCourse)[],
     currentCourse: null as PopulatedCourse | null,
     enrollments: [] as PopulatedEnrollment[],
     loading: false,
@@ -33,12 +33,13 @@ export const useCourseStore = defineStore('course', {
       
       this.loading = true;
       try {
-        const response = await CourseService.fetchCourses(params?.id);
         if (params?.id) {
-          this.currentCourse = Array.isArray(response) ? null : response;
+          const response = await CourseService.fetchCourses(params.id) as PopulatedCourse;
+          this.currentCourse = response;
           this.params.id = params.id;
         } else {
-          this.courses = Array.isArray(response) ? response : [response];
+          const response = await CourseService.fetchCourses() as Course[];
+          this.courses = response;
           this.params.id = null;
         }
       } catch (err) {
@@ -76,7 +77,7 @@ export const useCourseStore = defineStore('course', {
           this.courses[index] = updated;
         }
         if (this.currentCourse?.id === id) {
-          this.currentCourse = { ...this.currentCourse, ...updated };
+          this.currentCourse = await CourseService.fetchCourses(id) as PopulatedCourse;
         }
         return updated;
       } catch (err) {

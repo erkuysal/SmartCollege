@@ -81,19 +81,19 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useCollegeStore } from '@/utils/stores/collegeStore';
+import { useCourseStore } from '@/utils/stores/college/courseStore';
 import { useTeacherStore } from '@/utils/stores/users/teacherStore';
 import { useStudentStore } from '@/utils/stores/users/studentStore';
-import type { Course } from '@/utils/interfaces/collegeInterface';
-import type { Student } from '@/utils/interfaces/userInterface';
+import type { Course, PopulatedCourse } from '@/utils/interfaces/college/courseInterface';
+import type { Student } from '@/utils/interfaces/users/studentInterface';
 
 const route = useRoute();
 const router = useRouter();
-const collegeStore = useCollegeStore();
+const courseStore = useCourseStore();
 const teacherStore = useTeacherStore();
 const studentStore = useStudentStore();
 
-const course = ref<Course | null>(null);
+const course = ref<Course | PopulatedCourse | null>(null);
 const loading = ref(false);
 const dialogVisible = ref(false);
 const selectedStudent = ref<number | null>(null);
@@ -101,7 +101,7 @@ const selectedStudent = ref<number | null>(null);
 // Computed properties for better reactivity
 const enrolledStudents = computed(() => {
   if (!course.value) return [];
-  const enrollments = collegeStore.getEnrollmentsByCourse(course.value.id);
+  const enrollments = courseStore.getEnrollmentsByCourse(course.value.id);
   return enrollments
     .map(enrollment => studentStore.studentById(enrollment.student))
     .filter((student): student is Student => student !== undefined)
@@ -114,7 +114,7 @@ const enrolledStudents = computed(() => {
 const availableStudents = computed(() => {
   if (!course.value) return [];
   const enrolledIds = new Set(
-    collegeStore.getEnrollmentsByCourse(course.value.id)
+    courseStore.getEnrollmentsByCourse(course.value.id)
       .map(enrollment => enrollment.student)
   );
   return studentStore.students
@@ -126,8 +126,8 @@ const availableStudents = computed(() => {
 });
 
 const headers = [
-  { title: 'Name', key: 'full_name' },
-  { title: 'Student ID', key: 'student_number' },
+  { title: 'Name', key: 'full_name', align: 'start' },
+  { title: 'Student ID', key: 'student_number', align: 'start' },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' }
 ];
 
@@ -149,11 +149,11 @@ async function addStudent() {
 
   loading.value = true;
   try {
-    await collegeStore.createEnrollment({
+    await courseStore.createEnrollment({
       student: selectedStudent.value,
       course: course.value.id
     });
-    await collegeStore.fetchCourseEnrollments(course.value.id);
+    await courseStore.fetchEnrollments({ course: course.value.id });
     dialogVisible.value = false;
   } catch (error) {
     console.error('Error enrolling student:', error);
@@ -167,12 +167,12 @@ async function removeStudent(student: Student) {
 
   loading.value = true;
   try {
-    const enrollment = collegeStore.getEnrollmentsByCourse(course.value.id)
+    const enrollment = courseStore.getEnrollmentsByCourse(course.value.id)
       .find(e => e.student === student.id);
 
     if (enrollment) {
-      await collegeStore.deleteEnrollment(enrollment.id);
-      await collegeStore.fetchCourseEnrollments(course.value.id);
+      await courseStore.deleteEnrollment(enrollment.id);
+      await courseStore.fetchEnrollments({ course: course.value.id });
     }
   } catch (error) {
     console.error('Error removing student:', error);
@@ -190,9 +190,10 @@ onMounted(async () => {
       teacherStore.fetchTeachers()
     ]);
 
-    course.value = await collegeStore.getCourse(courseId);
+    await courseStore.fetchCourses({ id: courseId });
+    course.value = courseStore.currentCourse;
     if (course.value) {
-      await collegeStore.fetchCourseEnrollments(course.value.id);
+      await courseStore.fetchEnrollments({ course: course.value.id });
     }
   } catch (error) {
     console.error('Error loading course details:', error);
