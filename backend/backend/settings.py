@@ -27,11 +27,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+AUTH_USER_MODEL = 'base.User'
+
 
 # Application definition
 
 INSTALLED_APPS = [
     # ---------- DEFAULT -----------
+
+    # ------------------------------
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,8 +48,38 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     # ---------- LOCAL -----------
-    'users',
-    'classes',
+    # --- College ---
+    'college.departments',
+    'college.courses',
+    'college.classrooms',
+    'college.facilities',  # NEW: Adds hostel, cafeteria, library, etc.
+    'college.schedules',
+
+    # --- Users ---
+    'users.base',  # NEW: Common user authentication (login, roles)
+    'users.staff',
+    'users.lecturers',
+    'users.students',
+
+    # --- Attendance & Academic Records ---
+    'academics.attendance',  # NEW: Tracks RFID-based attendance
+    'academics.grades',  # NEW: Stores student grades & performance
+    'academics.enrollment',  # NEW: Manages student course enrollment
+    'academics.bindings',  # NEW: Many-to-many relationships between models
+
+    # --- Transactions & Services ---
+    'transactions.rfid',  # Renamed for clarity
+    'transactions.payments',  # NEW: Handles cafeteria purchases, hostel payments
+
+    # --- Security & Access Control ---
+    'security.audit_logs',  # NEW: Tracks actions performed in the system
+    'security.authentication',  # NEW: MFA, password resets, etc.
+
+    # --- Utilities ---
+    'utilities.rfid_util',
+    'utilities.notifications',  # NEW: SMS, email, push notifications
+    'utilities.reports',  # NEW: Generates reports for admins
+
 ]
 
 MIDDLEWARE = [

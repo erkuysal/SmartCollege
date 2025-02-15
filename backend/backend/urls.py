@@ -1,13 +1,22 @@
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from backend.admin.admin import custom_admin_site
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', custom_admin_site.urls),
 
-    # Your app’s urls
+    # Module Urls
     path('api/users/', include('users.urls')),
-    path('api/classes/', include('classes.urls')),
+    path('api/academics/', include('academics.urls')),
+    path('api/college/', include('college.urls')),
+
+    # UNDER CONSTRUCTION
+    # path('api/security/', include('security.urls')),
+    # path('api/transactions/', include('transactions.urls')),
+
+    # Utilities
+    path('api/utilities/', include('utilities.urls')),
 
     # drf-spectacular schema and UIs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
