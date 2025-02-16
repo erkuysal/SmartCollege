@@ -11,11 +11,11 @@ class ClassroomAdmin(admin.ModelAdmin):
     list_display = ('name', 'capacity', 'building', 'department', 'facility', 'has_projector', 'has_whiteboard', 'is_active', 'is_in_use_now', 'created_at')
     list_filter = ('building', 'department', 'facility', 'has_projector', 'has_whiteboard', 'is_active')
     search_fields = ('name', 'building', 'department__name', 'facility__name')
-    ordering = ['-created_at']  # ✅ Default ordering by latest
+    ordering = ['-created_at']  # Default ordering by latest
 
     def is_in_use_now(self, obj):
         """Check if the classroom is currently in use"""
-        return obj.is_in_use() if hasattr(obj, 'is_in_use') else False  # ✅ Prevent AttributeError
+        return obj.is_in_use() if hasattr(obj, 'is_in_use') else False  # Prevent AttributeError
     is_in_use_now.boolean = True
     is_in_use_now.short_description = "In Use Now?"
 
@@ -34,18 +34,25 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ('course_code', 'course_name', 'department', 'credit_hours', 'semester_offered', 'is_active', 'created_at')
     list_filter = ('department', 'is_active', 'semester_offered')
     search_fields = ('course_code', 'course_name', 'department__name')
-    ordering = ['course_code']  # ✅ Sort courses alphabetically
+    ordering = ['course_code']
 
 
-class CourseInline(admin.TabularInline):  # ✅ Adds inline editing for Courses inside Departments
+class CoursePackageAdmin(admin.ModelAdmin):
+    list_display = ('department', 'semester')
+    list_filter = ('department', 'semester')
+    search_fields = ('department__name',)
+    filter_horizontal = ('courses',)
+
+
+class CourseInline(admin.TabularInline):  # Adds inline editing for Courses inside Departments
     model = Course
-    extra = 0  # ✅ Set to 0 for a cleaner interface
+    extra = 0
 
 
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ('name', 'faculty')
     inlines = [CourseInline]
-    ordering = ['name']  # ✅ Sort departments alphabetically
+    ordering = ['name']
 
 
 class ScheduleAdmin(admin.ModelAdmin):
@@ -56,7 +63,7 @@ class ScheduleAdmin(admin.ModelAdmin):
 
     def get_instructor(self, obj):
         """Retrieve instructor's name if available"""
-        return obj.instructor.user.email if hasattr(obj, 'instructor') and obj.instructor else "N/A"  # ✅ Prevent errors
+        return obj.instructor.user.email if hasattr(obj, 'instructor') and obj.instructor else "N/A"  # Prevent errors
     get_instructor.short_description = "Instructor"
 
 

@@ -20,3 +20,17 @@ class Course(models.Model):
     class Meta:
         ordering = ['course_code']
 
+
+class CoursePackage(models.Model):
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="course_packages")
+    semester = models.IntegerField(help_text="Semester this package applies to")
+    courses = models.ManyToManyField(Course, related_name="included_in_packages")
+
+    class Meta:
+        unique_together = ('department', 'semester')  # Ensure one package per semester per department
+        ordering = ['semester']
+
+    def __str__(self):
+        return f"{self.department.name} - Semester {self.semester}"
+
+

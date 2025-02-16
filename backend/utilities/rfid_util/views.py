@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from users.base.serializers import UserSerializer
@@ -15,46 +16,38 @@ class RFIDTagViewSet(viewsets.ModelViewSet):
     serializer_class = RFIDTagSerializer
 
 
-@api_view(['POST'])
-def identify_user(request):
+class IdentifyUserView(GenericAPIView):
     """
-    Identifies a user based on an RFID scan.
-    Expected JSON Payload: {"tag_id": "123456"}
+    Identifies a user based on their RFID tag.
     """
-    tag_id = request.data.get("tag_id")
+    # permission_classes = [IsAuthenticated]
+    serializer_class = RFIDTagSerializer
 
-    try:
-        rfid = RFIDTag.objects.get(tag_id=tag_id)
-        user_data = UserSerializer(rfid.user).data
-        return Response({"user": user_data}, status=200)
+    def post(self, request):
+        rfid_tag = request.data.get("rfid_tag")
+        try:
+            rfid = RFIDTag.objects.get(tag_id=rfid_tag)
+            return Response({"user": rfid.user.email, "rfid_tag": rfid.tag_id}, status=status.HTTP_200_OK)
+        except RFIDTag.DoesNotExist:
+            return Response({"error": "RFID tag not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    except RFIDTag.DoesNotExist:
-        return Response({"error": "RFID tag not found"}, status=404)
 
-
-@api_view(['POST'])
-def write_to_rfid(request):
+class WriteToRFIDView(GenericAPIView):
     """
     Writes user data to an RFID tag.
-    Expected JSON Payload: {"tag_id": "123456", "user_id": 1}
     """
-    tag_id = request.data.get("tag_id")
-    user_id = request.data.get("user_id")
+    # permission_classes = [IsAuthenticated]
+    serializer_class = RFIDTagSerializer
 
-    try:
-        # Ensure the tag exists
-        rfid = RFIDTag.objects.get(tag_id=tag_id)
+    def post(self, request):
+        rfid_tag = request.data.get("rfid_tag")
+        user_id = request.data.get("user_id")
 
-        # Assign the tag to the user if it belongs to another user
-        if rfid.user.id != user_id:
-            return Response({"error": "RFID tag is already assigned to another user"}, status=400)
-
-        # Simulate writing data to RFID (in real-world cases, integrate with an RFID writer)
-        rfid.last_written_at = timezone.now()
-        rfid.save()
-
-        return Response({"message": f"RFID tag {tag_id} updated for user {rfid.user.email}"}, status=200)
-
-    except RFIDTag.DoesNotExist:
-        return Response({"error": "RFID tag not found"}, status=404)
+        try:
+            rfid = RFIDTag.objects.get(tag_id=rfid_tag)
+            rfid.user_id = user_id
+            rfid.save()
+            return Response({"message": "RFID data updated successfully"}, status=status.HTTP_200_OK)
+        except RFIDTag.DoesNotExist:
+            return Response({"error": "RFID tag not found"}, status=status.HTTP_404_NOT_FOUND)
 

@@ -183,5 +183,9 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Student API',
     'DESCRIPTION': 'API for student management',
     'VERSION': '1.0.0',
+    # 'ENUM_NAME_OVERRIDES': {
+    #     'academics.attendance.ATTENDANCE_STATUS_CHOICES': 'AttendanceStatusEnum',
+    #     'users.students.STUDENT_STATUS_CHOICES': 'StudentStatusEnum',
+    # },
 }
 

@@ -8,8 +8,18 @@ from college.courses.models import Course
 
 
 class AttendanceAdmin(admin.ModelAdmin):
-    list_display = ('student', 'session', 'status', 'timestamp')
-    list_filter = ('status', 'session')
+    list_display = [
+        'student',
+        'session',
+        'attendance_status',  # Changed from 'status'
+        'timestamp'
+    ]
+    list_filter = [
+        'attendance_status',  # Changed from 'status'
+        'session',
+        'timestamp'
+    ]
+    search_fields = ['student__user__email', 'session__course__course_name']
 
 
 class AttendanceInline(admin.TabularInline):  # ✅ Inline Attendance Records inside Courses
@@ -23,8 +33,9 @@ class AttendanceInline(admin.TabularInline):  # ✅ Inline Attendance Records in
 
 
 class AttendanceSessionAdmin(admin.ModelAdmin):
-    list_display = ('lecturer', 'course', 'classroom', 'start_time', 'is_active')
-    list_filter = ('is_active', 'course')
+    list_display = ['course', 'lecturer', 'classroom', 'start_time', 'is_active']
+    list_filter = ['is_active', 'course', 'lecturer']
+    search_fields = ['course__course_name', 'lecturer__user__email']
 
 
 class EnrollmentAdmin(admin.ModelAdmin):

@@ -12,6 +12,6 @@ class ClassroomSerializer(serializers.ModelSerializer):
         model = Classroom
         fields = '__all__'
 
-    def get_is_in_use(self, obj):
+    def get_is_in_use(self, obj) -> bool:
         return obj.is_in_use()
 

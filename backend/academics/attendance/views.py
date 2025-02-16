@@ -1,42 +1,45 @@
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.generics import GenericAPIView
 
 from users.students.models import Student
 from users.lecturers.models import Lecturer
-
 from college.courses.models import Course
 from college.classrooms.models import Classroom
+from college.schedules.models import Schedule
 
 from .models import Attendance, AttendanceSession
-from .serializers import AttendanceSerializer, UpdateAttendanceStatusSerializer
+from .serializers import AttendanceSerializer, UpdateAttendanceStatusSerializer, AttendanceSessionSerializer
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing attendance records.
+    """
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
 
 
-@api_view(['POST'])
-def start_attendance_session(request):
+class StartAttendanceSessionView(GenericAPIView):
     """
     Starts an attendance session when the lecturer scans their RFID.
-    Expected JSON: {"rfid_tag": "123456", "classroom_id": 1}
     """
-    rfid_tag = request.data.get("rfid_tag")
-    classroom_id = request.data.get("classroom_id")
+    serializer_class = AttendanceSessionSerializer
+    permission_classes = [IsAuthenticated]
 
-    try:
-        lecturer = Lecturer.objects.get(user__rfid_tag__tag_id=rfid_tag)
-        classroom = Classroom.objects.get(id=classroom_id)
+    def post(self, request):
+        rfid_tag = request.data.get("rfid_tag")
+        classroom_id = request.data.get("classroom_id")
 
-        # Check if there is an active scheduled course in this classroom
+        lecturer = get_object_or_404(Lecturer, user__rfid_tag__tag_id=rfid_tag)
+        classroom = get_object_or_404(Classroom, id=classroom_id)
+
         now = timezone.now()
-        from college.schedules.models import Schedule
-
         schedule = Schedule.objects.filter(
             classroom=classroom,
             start_time__lte=now,
@@ -44,38 +47,38 @@ def start_attendance_session(request):
         ).first()
 
         if not schedule:
-            return Response({"error": "No scheduled lesson at this time"}, status=400)
+            return Response({"error": "No scheduled lesson at this time"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Start an attendance session
-        session = AttendanceSession.objects.create(
+        # Check if an active session already exists for this schedule
+        session, created = AttendanceSession.objects.get_or_create(
             lecturer=lecturer,
             classroom=classroom,
-            course=schedule.course
+            course=schedule.course,
+            defaults={"start_time": timezone.now(), "is_active": True}
         )
 
-        return Response({"message": "Attendance started", "session_id": session.id}, status=201)
-
-    except Lecturer.DoesNotExist:
-        return Response({"error": "Lecturer not found"}, status=404)
-    except Classroom.DoesNotExist:
-        return Response({"error": "Classroom not found"}, status=404)
+        return Response({
+            "message": "Attendance session started" if created else "Session already active",
+            "session_id": session.id
+        }, status=status.HTTP_201_CREATED)
 
 
-@api_view(['POST'])
-def mark_attendance(request):
+class MarkAttendanceView(GenericAPIView):
     """
     Marks student attendance during an active session.
-    Expected JSON: {"rfid_tag": "123456", "session_id": 1}
     """
-    rfid_tag = request.data.get("rfid_tag")
-    session_id = request.data.get("session_id")
+    serializer_class = AttendanceSerializer
+    permission_classes = [IsAuthenticated]
 
-    try:
-        student = Student.objects.get(user__rfid_tag__tag_id=rfid_tag)
-        session = AttendanceSession.objects.get(id=session_id, is_active=True)
+    def post(self, request):
+        rfid_tag = request.data.get("rfid_tag")
+        session_id = request.data.get("session_id")
+
+        student = get_object_or_404(Student, user__rfid_tag__tag_id=rfid_tag)
+        session = get_object_or_404(AttendanceSession, id=session_id, is_active=True)
 
         if session.get_status() == "Closed":
-            return Response({"error": "Attendance has closed"}, status=400)
+            return Response({"error": "Attendance has closed"}, status=status.HTTP_400_BAD_REQUEST)
 
         attendance, created = Attendance.objects.get_or_create(
             session=session,
@@ -83,37 +86,25 @@ def mark_attendance(request):
             defaults={"status": session.get_status()}
         )
 
-        if not created:
-            return Response({"message": "Attendance already recorded"}, status=400)
-
-        return Response({"message": f"Attendance recorded as {attendance.status}"}, status=201)
-
-    except Student.DoesNotExist:
-        return Response({"error": "Student not found"}, status=404)
-    except AttendanceSession.DoesNotExist:
-        return Response({"error": "Session not found or closed"}, status=404)
+        return Response({
+            "message": f"Attendance recorded as {attendance.status}" if created else "Attendance already recorded"
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST)
 
 
-
-@api_view(['PATCH'])
-@permission_classes([IsAdminUser])  # ✅ Only admins can change to "Excused"
-def update_attendance_status(request, attendance_id):
+class UpdateAttendanceStatusView(GenericAPIView):
     """
     Updates an attendance record to "Excused".
     Only 'Absent' status can be updated.
     """
-    try:
-        attendance = Attendance.objects.get(id=attendance_id)
+    serializer_class = UpdateAttendanceStatusSerializer
+    permission_classes = [IsAdminUser]
 
-        serializer = UpdateAttendanceStatusSerializer(attendance, data=request.data, partial=True)
+    def patch(self, request, attendance_id):
+        attendance = get_object_or_404(Attendance, id=attendance_id)
+
+        serializer = self.get_serializer(attendance, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": f"Attendance status updated to {attendance.status}"}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    except Attendance.DoesNotExist:
-        return Response({"error": "Attendance record not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
-

@@ -19,9 +19,27 @@ class CustomUserAdmin(UserAdmin):
 
 
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'department', 'rfid_tag', 'balance_points', 'enrolled_at')
-    list_filter = ('department',)
+    list_display = [
+        'user',
+        'department',
+        'student_status',  # Changed from 'status'
+        'semester',
+        'rfid_tag',
+        'balance_points',
+        'enrolled_at'
+    ]
+    list_filter = [
+        'student_status',  # Changed from 'status'
+        'department',
+        'semester'
+    ]
     search_fields = ('user__email', 'rfid_tag')
+    actions = ['activate_students']
+
+    def activate_students(self, request, queryset):
+        queryset.update(status="Active")
+
+    activate_students.short_description = "Activate selected students"
 
 
 class LecturerAdmin(admin.ModelAdmin):
