@@ -1,10 +1,8 @@
 from django.db import models
+from django.contrib.auth import get_user_model  # ✅ Avoid direct import
 
 from college.departments.models import Department
 from college.courses.models import CoursePackage
-
-from users.base.models import User
-
 
 class Student(models.Model):
     STUDENT_STATUS_CHOICES = [
@@ -13,7 +11,7 @@ class Student(models.Model):
         ('GRADUATED', 'Graduated'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student_profile')
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='student_profile')
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     student_status = models.CharField(max_length=10, choices=STUDENT_STATUS_CHOICES, default="INACTIVE", help_text="Current student status")
     semester = models.IntegerField(default=1)
@@ -24,8 +22,7 @@ class Student(models.Model):
     enrolled_at = models.DateField(auto_now_add=True, help_text="Date of Registration")
 
     def __str__(self):
-        return (f"{self.user.username} - {self.department.name if self.department else 'No Department'} "
-                f"- {self.student_status} - Semester {self.semester}")
+        return f"{self.user.username} - {self.department.name if self.department else 'No Department'} - {self.student_status} - Semester {self.semester}"
 
     def assign_courses_for_semester(self):
         """
@@ -34,5 +31,3 @@ class Student(models.Model):
         course_package = CoursePackage.objects.filter(department=self.department, semester=self.semester).first()
         if course_package:
             self.enrolled_courses.set(course_package.courses.all())
-
-

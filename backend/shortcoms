@@ -1,0 +1,20 @@
+rm -rf users/base/migrations/* users/students/migrations/* users/lecturers/migrations/* users/staff/migrations/*
+touch users/base/migrations/__init__.py
+touch users/students/migrations/__init__.py
+touch users/lecturers/migrations/__init__.py
+touch users/staff/migrations/__init__.py
+
+
+rm -rf college/classrooms/migrations/* college/courses/migrations/* college/departments/migrations/* college/facilities/migrations/* college/schedules/migrations/*
+touch college/classrooms/migrations/__init__.py
+touch college/courses/migrations/__init__.py
+touch college/departments/migrations/__init__.py
+touch college/facilities/migrations/__init__.py
+touch college/schedules/migrations/__init__.py
+
+
+rm -rf academics/attendance/migrations/* academics/bindings/migrations/* academics/enrollment/migrations/* academics/grades/migrations/*
+touch academics/attendance/migrations/__init__.py
+touch academics/bindings/migrations/__init__.py
+touch academics/enrollment/migrations/__init__.py
+touch academics/grades/migrations/__init__.py
