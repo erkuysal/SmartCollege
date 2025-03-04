@@ -5,7 +5,7 @@
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
       <v-toolbar-title>
-        <span class="text-h6">{{ course?.title || 'Course Details' }}</span>
+        <span class="text-h6">{{ course?.name || 'Course Details' }}</span>
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
@@ -19,8 +19,9 @@
     <!-- Course Information -->
     <v-card class="mt-4">
       <v-card-text>
+        <p><strong>Course Code:</strong> {{ course?.code }}</p>
         <p><strong>Description:</strong> {{ course?.description }}</p>
-        <p><strong>Teacher:</strong> {{ getTeacherName(course?.teacher) }}</p>
+        <p><strong>Lecturer:</strong> {{ getLecturerName(course?.lecturer) }}</p>
       </v-card-text>
     </v-card>
 
@@ -37,7 +38,7 @@
             color="error"
             size="small"
             variant="text"
-            @click="removeStudent(item.raw)"
+            @click="removeStudent(item)"
           >
             <v-icon>mdi-account-remove</v-icon>
             Remove
@@ -82,15 +83,15 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCourseStore } from '@/utils/stores/college/courseStore';
-import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import { useLecturerStore } from '@/utils/stores/users/lecturerStore';
 import { useStudentStore } from '@/utils/stores/users/studentStore';
-import type { Course, PopulatedCourse } from '@/utils/interfaces/college/courseInterface';
+import type { Course, PopulatedCourse, CourseEnrollment } from '@/utils/interfaces/college/courseInterface';
 import type { Student } from '@/utils/interfaces/users/studentInterface';
 
 const route = useRoute();
 const router = useRouter();
 const courseStore = useCourseStore();
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 const studentStore = useStudentStore();
 
 const course = ref<Course | PopulatedCourse | null>(null);
@@ -101,23 +102,27 @@ const selectedStudent = ref<number | null>(null);
 // Computed properties for better reactivity
 const enrolledStudents = computed(() => {
   if (!course.value) return [];
-  const enrollments = courseStore.getEnrollmentsByCourse(course.value.id);
-  return enrollments
-    .map(enrollment => studentStore.studentById(enrollment.student))
-    .filter((student): student is Student => student !== undefined)
-    .map(student => ({
-      ...student,
-      full_name: `${student.first_name} ${student.last_name}`
-    }));
+  return courseStore.enrollments
+    .filter(enrollment => enrollment.course === course.value?.id)
+    .map(enrollment => {
+      const student = studentStore.items.find(s => s.id === enrollment.student);
+      return student ? {
+        ...student,
+        full_name: `${student.first_name} ${student.last_name}`,
+        enrollment_id: enrollment.id
+      } : null;
+    })
+    .filter(student => student !== null);
 });
 
 const availableStudents = computed(() => {
   if (!course.value) return [];
   const enrolledIds = new Set(
-    courseStore.getEnrollmentsByCourse(course.value.id)
+    courseStore.enrollments
+      .filter(enrollment => enrollment.course === course.value?.id)
       .map(enrollment => enrollment.student)
   );
-  return studentStore.students
+  return studentStore.items
     .filter(student => !enrolledIds.has(student.id))
     .map(student => ({
       ...student,
@@ -126,15 +131,18 @@ const availableStudents = computed(() => {
 });
 
 const headers = [
-  { title: 'Name', key: 'full_name', align: 'start' },
-  { title: 'Student ID', key: 'student_number', align: 'start' },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' }
+  { title: 'Name', key: 'full_name', align: 'start' as const },
+  { title: 'Student ID', key: 'student_id', align: 'start' as const },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const }
 ];
 
-function getTeacherName(teacherId: number | undefined): string {
-  if (!teacherId) return 'Not Assigned';
-  const teacher = teacherStore.teacherById(teacherId);
-  return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher';
+function getLecturerName(lecturerId: number | { id: number; first_name: string; last_name: string; } | undefined): string {
+  if (!lecturerId) return 'Not Assigned';
+  if (typeof lecturerId === 'number') {
+    const lecturer = lecturerStore.lecturerById(lecturerId);
+    return lecturer ? `${lecturer.first_name} ${lecturer.last_name}` : 'Unknown Lecturer';
+  }
+  return `${lecturerId.first_name} ${lecturerId.last_name}`;
 }
 
 async function openAddStudentDialog() {
@@ -149,11 +157,8 @@ async function addStudent() {
 
   loading.value = true;
   try {
-    await courseStore.createEnrollment({
-      student: selectedStudent.value,
-      course: course.value.id
-    });
-    await courseStore.fetchEnrollments({ course: course.value.id });
+    await courseStore.enrollStudent(course.value.id, selectedStudent.value);
+    await courseStore.fetchCourseEnrollments(course.value.id);
     dialogVisible.value = false;
   } catch (error) {
     console.error('Error enrolling student:', error);
@@ -162,18 +167,13 @@ async function addStudent() {
   }
 }
 
-async function removeStudent(student: Student) {
+async function removeStudent(student: any) {
   if (!course.value || !confirm('Are you sure you want to remove this student from the course?')) return;
 
   loading.value = true;
   try {
-    const enrollment = courseStore.getEnrollmentsByCourse(course.value.id)
-      .find(e => e.student === student.id);
-
-    if (enrollment) {
-      await courseStore.deleteEnrollment(enrollment.id);
-      await courseStore.fetchEnrollments({ course: course.value.id });
-    }
+    await courseStore.unenrollStudent(course.value.id, student.enrollment_id);
+    await courseStore.fetchCourseEnrollments(course.value.id);
   } catch (error) {
     console.error('Error removing student:', error);
   } finally {
@@ -187,13 +187,13 @@ onMounted(async () => {
   try {
     await Promise.all([
       studentStore.fetchStudents(),
-      teacherStore.fetchTeachers()
+      lecturerStore.fetchLecturers()
     ]);
 
-    await courseStore.fetchCourses({ id: courseId });
-    course.value = courseStore.currentCourse;
+    await courseStore.fetchCourseById(courseId);
+    course.value = courseStore.selectedItem;
     if (course.value) {
-      await courseStore.fetchEnrollments({ course: course.value.id });
+      await courseStore.fetchCourseEnrollments(course.value.id);
     }
   } catch (error) {
     console.error('Error loading course details:', error);

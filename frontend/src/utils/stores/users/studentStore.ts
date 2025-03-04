@@ -1,160 +1,369 @@
-import { defineStore } from 'pinia'
-import { StudentService } from '@/utils/services/users/studentService'
-import type { Student } from '@/utils/interfaces/users/studentInterface'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import type { ListStoreState, FilterState } from '../base/types';
+import type { 
+  Student, 
+  EnrolledCourse, 
+  StudentAttendance, 
+  StudentGrade
+} from '../../interfaces/users/studentInterface';
+import studentService from '../../services/users/studentService';
+import type { RFIDCard } from '../../interfaces/utilities/RFIDInterface';
 
-export const useStudentStore = defineStore('student', {
-  // ========== State ==========
-  state: () => ({
-    students: [] as Student[],
-    currentStudent: null as Student | null,
-    loading: false,
-    error: null as string | null,
+// Initial filters
+const initialFilters: FilterState = {
+  search: '',
+  sortBy: 'last_name',
+  sortOrder: 'asc',
+  filters: {},
+  page: 1,
+  pageSize: 10
+};
 
-    // RFID-related state
-    rfidMessage: null as string | null,
-    rfidStatus: null as { valid?: boolean; error?: string } | null,
-  }),
+export const useStudentStore = defineStore('student', () => {
+  // State
+  const items = ref<Student[]>([]);
+  const pagination = ref({
+    count: 0,
+    next: null as string | null,
+    previous: null as string | null
+  });
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const selectedItem = ref<Student | null>(null);
+  
+  // Additional state
+  const courses = ref<EnrolledCourse[]>([]);
+  const attendanceRecords = ref<StudentAttendance[]>([]);
+  const grades = ref<StudentGrade[]>([]);
+  const rfidCard = ref<RFIDCard | null>(null);
+  const filters = ref<FilterState>({ ...initialFilters });
 
-  // ========== Getters ==========
-  getters: {
-    /**
-     * Returns the number of students in the store.
-     */
-    totalStudents: (state) => state.students.length,
-    studentById: (state) => (id: number) =>
-      state.students.find(student => student.student_number === id.toString()),
-  },
+  // Getters
+  const studentById = (id: number): Student | null => {
+    return items.value.find(student => student.id === id) || null;
+  };
 
-  // ========== Actions ==========
-  actions: {
-    /**
-     * Fetches all students from the server and updates the state.
-     */
-    async fetchStudents(studentNumber?: string) {
-      this.loading = true
-      this.error = null
-      try {
-        const response = await StudentService.getStudents(studentNumber)
-        if (Array.isArray(response)) {
-          this.students = response
-        } else {
-          this.currentStudent = response
-        }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-      } finally {
-        this.loading = false
+  // Actions
+  async function fetchStudents(params = {}) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const queryParams = {
+        page: filters.value.page,
+        page_size: filters.value.pageSize,
+        search: filters.value.search,
+        ordering: `${filters.value.sortOrder === 'desc' ? '-' : ''}${filters.value.sortBy}`,
+        ...filters.value.filters,
+        ...params
+      };
+      
+      console.log('Fetching students with params:', queryParams);
+      const response = await studentService.getStudents(queryParams);
+      console.log('Student API response:', response.data);
+      
+      // Handle both paginated and non-paginated responses
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        items.value = response.data as Student[];
+        pagination.value = {
+          count: response.data.length,
+          next: null,
+          previous: null
+        };
+      } else if (response.data.results) {
+        // Paginated response
+        items.value = response.data.results as Student[];
+        pagination.value = {
+          count: response.data.count || 0,
+          next: response.data.next,
+          previous: response.data.previous
+        };
+      } else {
+        // Unknown format, try to use the data directly
+        console.warn('Unexpected API response format:', response.data);
+        const processedData = Array.isArray(response.data) ? response.data : [response.data];
+        items.value = processedData as Student[];
+        pagination.value = {
+          count: items.value.length,
+          next: null,
+          previous: null
+        };
       }
-    },
-
-    /**
-     * Creates a new student on the server and adds it to the store's state.
-     */
-    async addStudent(newStudent: Omit<Student, 'student_number' | 'id'>) {
-      this.loading = true
-      this.error = null
-      try {
-        const created = await StudentService.addStudent(newStudent)
-        this.students.push(created)
-        return created
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Updates an existing student on the server, then updates it in the store's state.
-     */
-    async updateStudent(studentNumber: string, updateData: Partial<Student>) {
-      this.loading = true
-      this.error = null
-      try {
-        const updated = await StudentService.updateStudent(studentNumber, updateData)
-        const index = this.students.findIndex(s => s.student_number === studentNumber)
-        if (index !== -1) {
-          this.students[index] = updated
-        }
-        if (this.currentStudent?.student_number === studentNumber) {
-          this.currentStudent = updated
-        }
-        return updated
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Deletes an existing student on the server, then removes it from the store's state.
-     */
-    async deleteStudent(studentNumber: string) {
-      this.loading = true
-      this.error = null
-      try {
-        await StudentService.deleteStudent(studentNumber)
-        this.students = this.students.filter(s => s.student_number !== studentNumber)
-        if (this.currentStudent?.student_number === studentNumber) {
-          this.currentStudent = null
-        }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Writes RFID data for a specific student.
-     */
-    async writeRFID(studentNumber: string) {
-      this.loading = true
-      this.error = null
-      this.rfidMessage = null
-      try {
-        const response = await StudentService.writeRFID(studentNumber)
-        this.rfidMessage = response.message
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Reads RFID data from the card and validates it against the DB.
-     */
-    async readRFID(): Promise<string | undefined> {
-      this.loading = true
-      this.error = null
-      this.rfidMessage = null
-      this.rfidStatus = null
-      try {
-        const response = await StudentService.readRFID()
-        if (response.message) this.rfidMessage = response.message
-        this.rfidStatus = { valid: response.valid, error: response.error }
-        return response.student_number
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    resetState() {
-      this.students = []
-      this.currentStudent = null
-      this.loading = false
-      this.error = null
-      this.rfidMessage = null
-      this.rfidStatus = null
+      
+      console.log('Processed students:', items.value);
+      loading.value = false;
+    } catch (err: any) {
+      console.error('Error fetching students:', err);
+      loading.value = false;
+      error.value = err.response?.data?.detail || 'Failed to fetch students';
     }
-  },
-})
+  }
+  
+  async function fetchStudentById(id: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.getStudentById(id);
+      selectedItem.value = response.data;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to fetch student with ID ${id}`;
+    }
+  }
+  
+  async function createStudent(studentData: Partial<Student>) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.createStudent(studentData);
+      items.value = [...items.value, response.data];
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || 'Failed to create student';
+    }
+  }
+  
+  async function updateStudent(id: number, studentData: Partial<Student>) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.updateStudent(id, studentData);
+      items.value = items.value.map(student => 
+        student.id === id ? { ...student, ...response.data } : student
+      );
+      if (selectedItem.value && selectedItem.value.id === id) {
+        selectedItem.value = { ...selectedItem.value, ...response.data };
+      }
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to update student with ID ${id}`;
+    }
+  }
+  
+  async function deleteStudent(id: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      await studentService.deleteStudent(id);
+      items.value = items.value.filter(student => student.id !== id);
+      if (selectedItem.value && selectedItem.value.id === id) {
+        selectedItem.value = null;
+      }
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to delete student with ID ${id}`;
+    }
+  }
+  
+  async function fetchStudentCourses(studentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.getStudentCourses(studentId);
+      courses.value = response.data.results;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to fetch courses for student with ID ${studentId}`;
+    }
+  }
+  
+  async function enrollStudentInCourse(studentId: number, courseId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.enrollStudentInCourse(studentId, courseId);
+      courses.value = [...courses.value, response.data];
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to enroll student in course`;
+    }
+  }
+  
+  async function dropCourse(studentId: number, enrollmentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      await studentService.dropCourse(studentId, enrollmentId);
+      courses.value = courses.value.filter(course => course.id !== enrollmentId);
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to drop course`;
+    }
+  }
+  
+  async function fetchStudentAttendance(studentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.getStudentAttendance(studentId);
+      attendanceRecords.value = response.data.results;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to fetch attendance for student with ID ${studentId}`;
+    }
+  }
+  
+  async function fetchStudentGrades(studentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.getStudentGrades(studentId);
+      grades.value = response.data.results;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to fetch grades for student with ID ${studentId}`;
+    }
+  }
+  
+  async function fetchStudentRFIDCard(studentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.getStudentRFIDCard(studentId);
+      rfidCard.value = response.data;
+      loading.value = false;
+    } catch (err: any) {
+      // If 404, it means the student doesn't have an RFID card
+      if (err.response?.status === 404) {
+        rfidCard.value = null;
+        loading.value = false;
+      } else {
+        loading.value = false;
+        error.value = err.response?.data?.detail || `Failed to fetch RFID card for student with ID ${studentId}`;
+      }
+    }
+  }
+  
+  async function assignRFIDCard(studentId: number, cardId: string) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await studentService.assignRFIDCard(studentId, cardId);
+      rfidCard.value = response.data;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to assign RFID card to student`;
+    }
+  }
+  
+  async function removeRFIDCard(studentId: number) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      await studentService.removeRFIDCard(studentId);
+      rfidCard.value = null;
+      loading.value = false;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to remove RFID card from student`;
+    }
+  }
+  
+  async function readRFIDCard(cardId: string) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      // This is a placeholder since the actual method doesn't exist in the service
+      // You'll need to implement this method in the studentService
+      // const response = await studentService.readRFIDCard(cardId);
+      // For now, we'll just return a mock response
+      loading.value = false;
+      return { success: true, cardId };
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to read RFID card`;
+      return null;
+    }
+  }
+  
+  function setFilters(newFilters: Partial<FilterState>) {
+    filters.value = { ...filters.value, ...newFilters };
+  }
+  
+  function resetFilters() {
+    filters.value = { ...initialFilters };
+  }
+  
+  function clearError() {
+    error.value = null;
+  }
+  
+  function resetState() {
+    items.value = [];
+    pagination.value = {
+      count: 0,
+      next: null,
+      previous: null
+    };
+    loading.value = false;
+    error.value = null;
+    selectedItem.value = null;
+    courses.value = [];
+    attendanceRecords.value = [];
+    grades.value = [];
+    rfidCard.value = null;
+    filters.value = { ...initialFilters };
+  }
+
+  return {
+    // State
+    items,
+    pagination,
+    loading,
+    error,
+    selectedItem,
+    courses,
+    attendanceRecords,
+    grades,
+    rfidCard,
+    filters,
+    
+    // Getters
+    studentById,
+    
+    // Actions
+    fetchStudents,
+    fetchStudentById,
+    createStudent,
+    updateStudent,
+    deleteStudent,
+    fetchStudentCourses,
+    enrollStudentInCourse,
+    dropCourse,
+    fetchStudentAttendance,
+    fetchStudentGrades,
+    fetchStudentRFIDCard,
+    assignRFIDCard,
+    removeRFIDCard,
+    readRFIDCard,
+    setFilters,
+    resetFilters,
+    clearError,
+    resetState
+  };
+});

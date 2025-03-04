@@ -21,11 +21,11 @@
         <v-card class="mx-auto">
           <v-card-text>
             <div class="text-h4 mb-2">{{ teacherCount }}</div>
-            <div class="text-caption">Total Staff</div>
+            <div class="text-caption">Total Lecturers</div>
           </v-card-text>
           <v-card-actions>
-            <v-btn variant="text" :to="{ name: 'staff' }">
-              View Staff
+            <v-btn variant="text" :to="{ name: 'lecturers' }">
+              View Lecturers
               <v-icon right>mdi-arrow-right</v-icon>
             </v-btn>
           </v-card-actions>
@@ -69,7 +69,7 @@
         <v-card>
           <v-card-title>Today's Schedule</v-card-title>
           <v-card-text>
-            <v-list>
+            <v-list v-if="todaySchedules.length > 0">
               <v-list-item
                 v-for="schedule in todaySchedules"
                 :key="schedule.id"
@@ -78,14 +78,17 @@
                   <v-icon>mdi-clock-outline</v-icon>
                 </template>
                 <v-list-item-title>
-                  {{ schedule.course.title }}
+                  {{ schedule.course?.name || 'Unknown Course' }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
                   {{ formatTime(schedule.start_time) }} - {{ formatTime(schedule.end_time) }}
-                  | Room: {{ schedule.classroom.name }}
+                  | Room: {{ schedule.classroom?.name || 'Unknown Room' }}
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
+            <div v-else class="text-center pa-4">
+              <p>No schedules for today</p>
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -115,9 +118,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useStudentStore } from '@/utils/stores/users/studentStore';
-import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import { useLecturerStore } from '@/utils/stores/users/lecturerStore';
 import { useCourseStore } from '@/utils/stores/college/courseStore';
 import { useClassroomStore } from '@/utils/stores/college/classroomStore';
 import { useScheduleStore } from '@/utils/stores/college/scheduleStore';
@@ -125,31 +128,65 @@ import type { PopulatedSchedule } from '@/utils/interfaces/college/scheduleInter
 
 // Store instances
 const studentStore = useStudentStore();
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 const courseStore = useCourseStore();
 const classroomStore = useClassroomStore();
 const scheduleStore = useScheduleStore();
 
+// Loading state
+const isLoading = ref(true);
+
 // Computed values for summary cards
-const studentCount = computed(() => studentStore.students.length);
-const teacherCount = computed(() => teacherStore.teachers.length);
-const courseCount = computed(() => courseStore.courses.length);
-const classroomCount = computed(() => classroomStore.classrooms.length);
+const studentCount = computed(() => {
+  return Array.isArray(studentStore.items) ? studentStore.items.length : 0;
+});
+const teacherCount = computed(() => {
+  return Array.isArray(lecturerStore.items) ? lecturerStore.items.length : 0;
+});
+const courseCount = computed(() => {
+  return Array.isArray(courseStore.items) ? courseStore.items.length : 0;
+});
+const classroomCount = computed(() => {
+  return Array.isArray(classroomStore.classrooms) ? classroomStore.classrooms.length : 0;
+});
 
 // Get today's schedules
 const todaySchedules = computed(() => {
+  if (!Array.isArray(scheduleStore.schedules)) return [];
+  
   const today = new Date().getDay();
   return scheduleStore.schedules
-    .filter(schedule => schedule.day_of_week === today)
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    .filter((schedule: PopulatedSchedule) => schedule && schedule.day_of_week === today)
+    .sort((a: PopulatedSchedule, b: PopulatedSchedule) => 
+      a.start_time.localeCompare(b.start_time));
 });
 
-// Helper functions
-function formatTime(time: string): string {
-  return new Date(`2000-01-01T${time}`).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+// Upcoming schedules
+const upcomingSchedules = computed(() => {
+  if (!Array.isArray(scheduleStore.schedules)) return [];
+  return scheduleStore.schedules.slice(0, 5);
+});
+
+// Format course name
+function formatCourseName(schedule: PopulatedSchedule) {
+  if (!schedule || !schedule.course) return 'Unknown Course';
+  return `${schedule.course.name} - ${schedule.classroom ? schedule.classroom.name : 'No Classroom'}`;
+}
+
+// Format time
+function formatTime(time: string) {
+  if (!time) return '';
+  try {
+    return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return time;
+  }
+}
+
+// Format day
+function formatDay(day: number) {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[day] || 'Unknown';
 }
 
 // Quick actions with correct route names
@@ -178,16 +215,42 @@ const quickActions = [
 
 // Initial data loading
 onMounted(async () => {
+  isLoading.value = true;
   try {
-    await Promise.all([
-      studentStore.fetchStudents(),
-      teacherStore.fetchTeachers(),
-      courseStore.fetchCourses(),
-      classroomStore.fetchClassrooms(),
-      scheduleStore.fetchSchedules()
-    ]);
+    // Load each store separately to handle errors individually
+    try {
+      await studentStore.fetchStudents();
+    } catch (error) {
+      console.error('Error loading students:', error);
+    }
+    
+    try {
+      await lecturerStore.fetchLecturers();
+    } catch (error) {
+      console.error('Error loading lecturers:', error);
+    }
+    
+    try {
+      await courseStore.fetchCourses();
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    }
+    
+    try {
+      await classroomStore.fetchClassrooms();
+    } catch (error) {
+      console.error('Error loading classrooms:', error);
+    }
+    
+    try {
+      await scheduleStore.fetchSchedules();
+    } catch (error) {
+      console.error('Error loading schedules:', error);
+    }
   } catch (error) {
     console.error('Error loading dashboard data:', error);
+  } finally {
+    isLoading.value = false;
   }
 });
 </script>

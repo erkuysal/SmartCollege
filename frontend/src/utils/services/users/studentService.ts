@@ -1,112 +1,106 @@
-import dispatch from "@/utils/dispatcher";
-import type { Student } from "@/utils/interfaces/users/studentInterface";
-import { API_ROUTES } from "@/utils/config/apiRoutes";
+import { BaseService, type QueryParams } from '../baseService';
+import { API_ROUTES } from '../../config/apiRoutes';
+import type { Student, StudentAttendance, StudentGrade, EnrolledCourse } from '../../interfaces/users/studentInterface';
+import type { PaginatedResponse } from '../baseService';
+import type { RFIDCard } from '../../interfaces/utilities/RFIDInterface';
 
-const { USERS_BASE_URL, STUDENTS_ROUTE } = API_ROUTES;
-
-export const StudentService = {
-  /**
-   * Fetches details of a specific student or all students.
-   * @param studentNumber - The student number to fetch (optional)
-   * @returns A Promise resolving to the Student object or an array of Students
-   */
-  async getStudents(studentNumber?: string): Promise<Student | Student[]> {
-    try {
-      if (studentNumber) {
-        // Fetch a specific student
-        const response = await dispatch.get<Student>(
-          `${USERS_BASE_URL}/${STUDENTS_ROUTE}/${studentNumber}/`
-        );
-        return response.data;
-      } else {
-        // Fetch all students
-        const response = await dispatch.get<Student[]>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}/`);
-        return response.data;
-      }
-    } catch (error) {
-      console.error(`Error fetching ${studentNumber ? `student ${studentNumber}` : "students"}:`, error);
-      throw error;
-    }
-  },
+export class StudentService extends BaseService {
+  constructor() {
+    super(API_ROUTES.STUDENTS_ROUTE);
+  }
 
   /**
-   * Creates a new student.
-   * @param newStudent - The student data to create
-   * @returns A Promise resolving to the created Student
+   * Get a list of students with optional filtering
    */
-  async addStudent(newStudent: Omit<Student, 'student_number' | 'id'>): Promise<Student> {
-    try {
-      const response = await dispatch.post<Student>(`${USERS_BASE_URL}/${STUDENTS_ROUTE}/`, newStudent);
-      return response.data;
-    } catch (error) {
-      console.error("Error creating student:", error);
-      throw error;
-    }
-  },
+  async getStudents(params?: QueryParams) {
+    return this.getList<Student>('', params);
+  }
 
   /**
-   * Update an existing student by student_number.
-   * Depending on your Django config, you might need a PUT (full update) or PATCH (partial).
+   * Get a student by ID
    */
-  async updateStudent(
-    studentNumber: string,
-    updateData: Partial<Student>
-  ): Promise<Student> {
-    try {
-      const response = await dispatch.patch<Student>(
-        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/`,
-        updateData
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating student ${studentNumber}:`, error);
-      throw error;
-    }
-  },
+  async getStudentById(id: number) {
+    return this.getById<Student>(id);
+  }
 
   /**
-   * Delete a student by student_number.
+   * Create a new student
    */
-  async deleteStudent(studentNumber: string): Promise<void> {
-    try {
-      await dispatch.delete(`${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/`);
-    } catch (error) {
-      console.error(`Error deleting student ${studentNumber}:`, error);
-      throw error;
-    }
-  },
+  async createStudent(studentData: Partial<Student>) {
+    return this.create<Student>(studentData);
+  }
 
   /**
-   * Write RFID data to the card for a specific student.
-   * POST /students/<student_number>/card/write/
+   * Update a student
    */
-  async writeRFID(studentNumber: string): Promise<{ message: string }> {
-    try {
-      const response = await dispatch.post<{ message: string }>(
-        `${USERS_BASE_URL}/${STUDENTS_ROUTE}${studentNumber}/card/write/`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error writing RFID for student ${studentNumber}:`, error);
-      throw error;
-    }
-  },
+  async updateStudent(id: number, studentData: Partial<Student>) {
+    return this.patch<Student>(id, studentData);
+  }
 
   /**
-   * Read RFID data from the card and validate it against the DB.
-   * GET /students/card/read/
+   * Delete a student
    */
-  async readRFID(): Promise<{
-    message?: string;
-    valid?: boolean;
-    error?: string;
-  }> {
-    try {
-      const response = await dispatch.get(`${USERS_BASE_URL}/${STUDENTS_ROUTE}card/read/`);
-      return response.data;
-    } catch (error) {
-      console.error("Error reading RFID from card:", error);
-      throw error;
-    }
-  },
-};
+  async deleteStudent(id: number) {
+    return this.delete<Student>(id);
+  }
+
+  /**
+   * Get courses for a student
+   */
+  async getStudentCourses(studentId: number) {
+    return this.get<PaginatedResponse<EnrolledCourse>>(`${studentId}/courses`);
+  }
+
+  /**
+   * Get grades for a student
+   */
+  async getStudentGrades(studentId: number) {
+    return this.get<PaginatedResponse<StudentGrade>>(`${studentId}/grades`);
+  }
+
+  /**
+   * Get attendance records for a student
+   */
+  async getStudentAttendance(studentId: number) {
+    return this.get<PaginatedResponse<StudentAttendance>>(`${studentId}/attendance`);
+  }
+
+  /**
+   * Enroll a student in a course
+   */
+  async enrollStudentInCourse(studentId: number, courseId: number) {
+    return this.post<EnrolledCourse>(`${studentId}/courses`, { course_id: courseId });
+  }
+
+  /**
+   * Drop a course for a student
+   */
+  async dropCourse(studentId: number, enrollmentId: number) {
+    return this.delete<void>(`${studentId}/courses/${enrollmentId}`);
+  }
+
+  /**
+   * Get RFID card for a student
+   */
+  async getStudentRFIDCard(studentId: number) {
+    return this.get<RFIDCard>(`${studentId}/rfid`);
+  }
+
+  /**
+   * Assign RFID card to a student
+   */
+  async assignRFIDCard(studentId: number, cardId: string) {
+    return this.post<RFIDCard>(`${studentId}/rfid`, { card_id: cardId });
+  }
+
+  /**
+   * Remove RFID card from a student
+   */
+  async removeRFIDCard(studentId: number) {
+    return this.delete<void>(`${studentId}/rfid`);
+  }
+}
+
+// Create and export a singleton instance
+const studentService = new StudentService();
+export default studentService;

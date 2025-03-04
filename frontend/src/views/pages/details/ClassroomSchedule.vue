@@ -114,8 +114,8 @@
                 <v-col cols="12">
                   <v-select
                     v-model="formData.course"
-                    :items="courseStore.courses"
-                    item-title="title"
+                    :items="courseStore.items"
+                    item-title="name"
                     item-value="id"
                     label="Course"
                     required
@@ -123,7 +123,7 @@
                   >
                     <template #item="{ props, item }">
                       <v-list-item v-bind="props">
-                        {{ item.raw.title }} - {{ getCourseDetails(item.raw.id) }}
+                        {{ item.raw.name }} - {{ getCourseDetails(item.raw.id) }}
                       </v-list-item>
                     </template>
                   </v-select>
@@ -187,7 +187,7 @@
           <v-btn
             color="primary"
             variant="text"
-            @click="saveSchedule"
+            @click="onScheduleSaved"
             :loading="scheduleStore.loading"
             :disabled="!isValid"
           >
@@ -205,8 +205,8 @@ import { useRoute } from 'vue-router';
 import { useClassroomStore } from '@/utils/stores/college/classroomStore';
 import { useScheduleStore } from '@/utils/stores/college/scheduleStore';
 import { useCourseStore } from '@/utils/stores/college/courseStore';
-import { useTeacherStore } from '@/utils/stores/users/teacherStore';
-import type { Schedule } from '@/utils/interfaces/college/scheduleInterface';
+import { useLecturerStore } from '@/utils/stores/users/lecturerStore';
+import type { Schedule, PopulatedSchedule } from '@/utils/interfaces/college/scheduleInterface';
 import EditSchedule from '@/views/pages/actions/EditSchedule.vue';
 import { useStorage } from '@vueuse/core';
 import { DAY_OF_WEEK } from '@/utils/interfaces/college/scheduleInterface';
@@ -218,21 +218,21 @@ const classroomId = Number(route.params.id);
 const classroomStore = useClassroomStore();
 const scheduleStore = useScheduleStore();
 const courseStore = useCourseStore();
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 
 // Constants
 const weekDays = [0, 1, 2, 3, 4, 5, 6]; // Monday to Sunday
 
 // State
 const dialogVisible = ref(false);
-const editingSchedule = ref<Schedule | null>(null);
+const editingSchedule = ref<PopulatedSchedule | null>(null);
 const isValid = ref(false);
 const form = ref<any>(null);
 const isEditMode = useStorage('classroom-schedule-edit-mode', false);
 const isDragging = ref(false);
 const dragStartTime = ref('');
 const dragStartDay = ref(0);
-const draggedSchedule = ref<Schedule | null>(null);
+const draggedSchedule = ref<PopulatedSchedule | null>(null);
 
 // Form data
 const formData = ref({
@@ -280,21 +280,32 @@ function shouldShowFullTime(time: string): boolean {
   return time.endsWith(':00:00');
 }
 
-function getScheduleForTimeSlot(day: number, time: string): Schedule | null {
-  return scheduleStore.schedules.find(s =>
+function getScheduleForTimeSlot(day: number, time: string): PopulatedSchedule | null {
+  // Find a schedule that matches the criteria
+  const schedule = scheduleStore.schedules.find(s => 
     s.day_of_week === day &&
     s.start_time <= time &&
     s.end_time > time &&
-    s.classroom === classroomId
-  ) || null;
+    s.classroom.id === classroomId
+  );
+  
+  return schedule || null;
 }
 
-function getCourseDetails(courseId: number | null | undefined): string {
+function getCourseDetails(courseId: number | { id: number } | null | undefined): string {
   if (!courseId) return 'No Course';
-  const course = courseStore.getCourseById(courseId);
+  
+  // Extract the ID whether courseId is a number or an object
+  const id = typeof courseId === 'number' ? courseId : courseId.id;
+  
+  // Find the course in the courses array
+  const course = courseStore.items.find(c => c.id === id);
   if (!course) return 'Unknown Course';
-  const teacher = teacherStore.teacherById(course.teacher);
-  return `${course.title} - ${teacher ? `${teacher.first_name} ${teacher.last_name}` : 'No Teacher'}`;
+  
+  // Find the lecturer in the lecturers array
+  const lecturer = lecturerStore.items.find(l => l.id === course.lecturer);
+  
+  return `${course.name} - ${lecturer ? `${lecturer.first_name} ${lecturer.last_name}` : 'No Teacher'}`;
 }
 
 // Event handlers
@@ -321,7 +332,7 @@ function onScheduleSaved() {
 }
 
 // Drag and drop handlers
-function handleDragStart(schedule: Schedule, day: number, time: string, e: DragEvent) {
+function handleDragStart(schedule: PopulatedSchedule, day: number, time: string, e: DragEvent) {
   if (!isEditMode.value || !(e.target instanceof HTMLElement)) return;
 
   isDragging.value = true;
@@ -349,10 +360,19 @@ async function handleDrop(day: number, time: string, e: DragEvent) {
     );
 
     const updatedSchedule: Partial<Schedule> = {
-      ...draggedSchedule.value,
+      id: draggedSchedule.value.id,
       day_of_week: day,
       start_time: time,
-      end_time: calculateNewTime(time, timeDiff)
+      end_time: calculateNewTime(time, timeDiff),
+      course: typeof draggedSchedule.value.course === 'number' ? 
+        draggedSchedule.value.course : 
+        draggedSchedule.value.course.id,
+      classroom: typeof draggedSchedule.value.classroom === 'number' ? 
+        draggedSchedule.value.classroom : 
+        draggedSchedule.value.classroom.id,
+      lecturer: typeof draggedSchedule.value.lecturer === 'number' ? 
+        draggedSchedule.value.lecturer : 
+        draggedSchedule.value.lecturer.id
     };
 
     await scheduleStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
@@ -375,9 +395,18 @@ async function handleDragEnd(e: DragEvent) {
     );
 
     const updatedSchedule: Partial<Schedule> = {
-      ...draggedSchedule.value,
+      id: draggedSchedule.value.id,
       start_time: dragStartTime.value,
-      end_time: calculateNewTime(draggedSchedule.value.end_time, timeDiff)
+      end_time: calculateNewTime(draggedSchedule.value.end_time, timeDiff),
+      course: typeof draggedSchedule.value.course === 'number' ? 
+        draggedSchedule.value.course : 
+        draggedSchedule.value.course.id,
+      classroom: typeof draggedSchedule.value.classroom === 'number' ? 
+        draggedSchedule.value.classroom : 
+        draggedSchedule.value.classroom.id,
+      lecturer: typeof draggedSchedule.value.lecturer === 'number' ? 
+        draggedSchedule.value.lecturer : 
+        draggedSchedule.value.lecturer.id
     };
 
     await scheduleStore.updateSchedule(draggedSchedule.value.id, updatedSchedule);
@@ -408,24 +437,24 @@ onMounted(async () => {
   try {
     await Promise.all([
       courseStore.fetchCourses(),
-      teacherStore.fetchTeachers(),
+      lecturerStore.fetchLecturers(),
       scheduleStore.fetchSchedules({ classroom: classroomId })
     ]);
   } catch (error) {
     console.error('Error loading initial data:', error);
     scheduleStore.resetState();
     courseStore.resetState();
-    teacherStore.resetState();
+    lecturerStore.resetState();
   }
 });
 
 onUnmounted(() => {
   scheduleStore.resetState();
   courseStore.resetState();
-  teacherStore.resetState();
+  lecturerStore.resetState();
 });
 
-async function deleteSchedule(schedule: Schedule | null) {
+async function deleteSchedule(schedule: PopulatedSchedule | null) {
   if (!schedule || !confirm('Are you sure you want to delete this schedule?')) return;
 
   try {

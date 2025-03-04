@@ -1,9 +1,9 @@
-import dispatch from '@/utils/dispatcher';
+import dispatch from '@/utils/apiClient';
 import type { Classroom } from '@/utils/interfaces/college/classroomInterface';
 import type { Schedule } from '@/utils/interfaces/college/scheduleInterface';
 import { API_ROUTES } from '@/utils/config/apiRoutes';
 
-const { COLLEGE_BASE_URL, CLASSROOMS_ROUTE } = API_ROUTES;
+const { COLLEGE_BASE_URL, CLASSROOMS_ROUTE, SCHEDULES_ROUTE } = API_ROUTES;
 
 export const ClassroomService = {
   /**
@@ -15,11 +15,11 @@ export const ClassroomService = {
     try {
       if (id) {
         const response = await dispatch.get<Classroom>(
-          `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${id}/`
+          `${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/${id}/`
         );
         return response.data;
       } else {
-        const response = await dispatch.get<Classroom[]>(`${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/`);
+        const response = await dispatch.get<Classroom[]>(`${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/`);
         return response.data;
       }
     } catch (error) {
@@ -36,7 +36,7 @@ export const ClassroomService = {
   async createClassroom(data: Omit<Classroom, 'id'>): Promise<Classroom> {
     try {
       const response = await dispatch.post<Classroom>(
-        `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/`,
+        `${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/`,
         data
       );
       return response.data;
@@ -55,7 +55,7 @@ export const ClassroomService = {
   async updateClassroom(id: number, data: Partial<Classroom>): Promise<Classroom> {
     try {
       const response = await dispatch.patch<Classroom>(
-        `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${id}/`,
+        `${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/${id}/`,
         data
       );
       return response.data;
@@ -71,7 +71,7 @@ export const ClassroomService = {
    */
   async deleteClassroom(id: number): Promise<void> {
     try {
-      await dispatch.delete(`${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${id}/`);
+      await dispatch.delete(`${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/${id}/`);
     } catch (error) {
       console.error(`Error deleting classroom ${id}:`, error);
       throw error;
@@ -85,9 +85,9 @@ export const ClassroomService = {
    */
   async fetchClassroomSchedules(classroomId: number): Promise<Schedule[]> {
     try {
-      const response = await dispatch.get<Schedule[]>(
-        `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${classroomId}/schedule/`
-      );
+      const url = `${COLLEGE_BASE_URL}${SCHEDULES_ROUTE}?classroom=${classroomId}`;
+      console.log('Fetching classroom schedules from URL:', url);
+      const response = await dispatch.get<Schedule[]>(url);
       return response.data;
     } catch (error) {
       console.error(`Error fetching schedules for classroom ${classroomId}:`, error);
@@ -104,7 +104,7 @@ export const ClassroomService = {
   async checkAvailability(classroomId: number, date: string): Promise<boolean> {
     try {
       const response = await dispatch.get<{ available: boolean }>(
-        `${COLLEGE_BASE_URL}/${CLASSROOMS_ROUTE}/${classroomId}/availability/?date=${date}`
+        `${COLLEGE_BASE_URL}${CLASSROOMS_ROUTE}/${classroomId}/availability/?date=${date}`
       );
       return response.data.available;
     } catch (error) {

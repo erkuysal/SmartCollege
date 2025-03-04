@@ -1,14 +1,14 @@
 <template>
-  <div class="departments-container p-4">
+  <div class="faculties-container p-4">
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center pa-4">
-        <span class="text-h5">Departments</span>
+        <span class="text-h5">Faculties</span>
         <v-btn
           color="primary"
           prepend-icon="mdi-plus"
-          @click="router.push('/admin/departments/add')"
+          @click="router.push('/admin/faculties/add')"
         >
-          Add Department
+          Add Faculty
         </v-btn>
       </v-card-title>
 
@@ -17,8 +17,8 @@
           <thead>
             <tr>
               <th>Name</th>
-              <th>Faculty</th>
-              <th>Head of Department</th>
+              <th>Code</th>
+              <th>Dean</th>
               <th>Office Location</th>
               <th>Status</th>
               <th>Actions</th>
@@ -30,22 +30,22 @@
                 <v-progress-circular indeterminate />
               </td>
             </tr>
-            <tr v-else-if="!departments.length">
+            <tr v-else-if="!faculties.length">
               <td colspan="6" class="text-center">
-                No departments found
+                No faculties found
               </td>
             </tr>
-            <tr v-for="department in departments" :key="department.id">
-              <td>{{ department.name }}</td>
-              <td>{{ department.faculty }}</td>
-              <td>{{ department.head_of_department || 'Not assigned' }}</td>
-              <td>{{ department.office_location || 'Not specified' }}</td>
+            <tr v-for="faculty in faculties" :key="faculty.id">
+              <td>{{ faculty.name }}</td>
+              <td>{{ faculty.code }}</td>
+              <td>{{ faculty.dean || 'Not assigned' }}</td>
+              <td>{{ faculty.office_location || 'Not specified' }}</td>
               <td>
                 <v-chip
-                  :color="department.is_active ? 'success' : 'error'"
+                  :color="faculty.is_active ? 'success' : 'error'"
                   size="small"
                 >
-                  {{ department.is_active ? 'Active' : 'Inactive' }}
+                  {{ faculty.is_active ? 'Active' : 'Inactive' }}
                 </v-chip>
               </td>
               <td>
@@ -54,14 +54,14 @@
                   variant="text"
                   size="small"
                   color="primary"
-                  @click="editDepartment(department)"
+                  @click="editFaculty(faculty)"
                 />
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
                   size="small"
                   color="error"
-                  @click="confirmDelete(department)"
+                  @click="confirmDelete(faculty)"
                 />
               </td>
             </tr>
@@ -73,9 +73,9 @@
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="showDeleteDialog" max-width="400">
       <v-card>
-        <v-card-title class="text-h5">Delete Department</v-card-title>
+        <v-card-title class="text-h5">Delete Faculty</v-card-title>
         <v-card-text>
-          Are you sure you want to delete {{ selectedDepartment?.name }}? This action cannot be undone.
+          Are you sure you want to delete {{ selectedFaculty?.name }}? This action cannot be undone.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -90,7 +90,7 @@
             color="error"
             variant="text"
             :loading="deleteLoading"
-            @click="deleteDepartment"
+            @click="deleteFaculty"
           >
             Delete
           </v-btn>
@@ -112,11 +112,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDepartmentStore } from '@/utils/stores/college/departmentStore'
-import type { Department } from '@/utils/interfaces/college/departmentInterface'
+import { useFacultyStore } from '@/utils/stores/college/facultyStore'
+import type { Faculty } from '@/utils/interfaces/college/facultyInterface'
 
 const router = useRouter()
-const departmentStore = useDepartmentStore()
+const facultyStore = useFacultyStore()
 
 const loading = ref(false)
 const deleteLoading = ref(false)
@@ -124,17 +124,17 @@ const showDeleteDialog = ref(false)
 const showSnackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('success')
-const selectedDepartment = ref<Department | null>(null)
+const selectedFaculty = ref<Faculty | null>(null)
 
-const departments = computed(() => departmentStore.items || [])
+const faculties = computed(() => facultyStore.items || [])
 
-const loadDepartments = async () => {
+const loadFaculties = async () => {
   loading.value = true
   try {
-    await departmentStore.fetchDepartments()
+    await facultyStore.fetchFaculties()
   } catch (error) {
-    console.error('Error loading departments:', error)
-    snackbarText.value = 'Error loading departments'
+    console.error('Error loading faculties:', error)
+    snackbarText.value = 'Error loading faculties'
     snackbarColor.value = 'error'
     showSnackbar.value = true
   } finally {
@@ -142,29 +142,29 @@ const loadDepartments = async () => {
   }
 }
 
-const editDepartment = (department: Department) => {
-  router.push(`/admin/departments/edit/${department.id}`)
+const editFaculty = (faculty: Faculty) => {
+  router.push(`/admin/faculties/edit/${faculty.id}`)
 }
 
-const confirmDelete = (department: Department) => {
-  selectedDepartment.value = department
+const confirmDelete = (faculty: Faculty) => {
+  selectedFaculty.value = faculty
   showDeleteDialog.value = true
 }
 
-const deleteDepartment = async () => {
-  if (!selectedDepartment.value) return
+const deleteFaculty = async () => {
+  if (!selectedFaculty.value) return
 
   deleteLoading.value = true
   try {
-    await departmentStore.deleteDepartment(selectedDepartment.value.id)
+    await facultyStore.deleteFaculty(selectedFaculty.value.id)
     showDeleteDialog.value = false
-    snackbarText.value = 'Department deleted successfully'
+    snackbarText.value = 'Faculty deleted successfully'
     snackbarColor.value = 'success'
     showSnackbar.value = true
-    await loadDepartments()
+    await loadFaculties()
   } catch (error) {
-    console.error('Error deleting department:', error)
-    snackbarText.value = 'Error deleting department'
+    console.error('Error deleting faculty:', error)
+    snackbarText.value = 'Error deleting faculty'
     snackbarColor.value = 'error'
     showSnackbar.value = true
   } finally {
@@ -173,12 +173,12 @@ const deleteDepartment = async () => {
 }
 
 onMounted(() => {
-  loadDepartments()
+  loadFaculties()
 })
 </script>
 
 <style scoped>
-.departments-container {
+.faculties-container {
   max-width: 1200px;
   margin: 0 auto;
 }

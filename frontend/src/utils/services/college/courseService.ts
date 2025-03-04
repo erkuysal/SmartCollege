@@ -1,124 +1,117 @@
-import dispatch from '@/utils/dispatcher';
-import type { Course, Enrollment, PopulatedCourse, PopulatedEnrollment } from '@/utils/interfaces/college/courseInterface';
-import { API_ROUTES } from '@/utils/config/apiRoutes';
+import { BaseService, type QueryParams } from '../baseService';
+import { API_ROUTES } from '../../config/apiRoutes';
+import type { Course, CourseSchedule, CourseEnrollment, PopulatedCourse } from '../../interfaces/college/courseInterface';
+import type { PaginatedResponse } from '../baseService';
 
-const { COLLEGE_BASE_URL, COURSES_ROUTE, ENROLLMENTS_ROUTE } = API_ROUTES;
-
-export const CourseService = {
-  /**
-   * Fetches all courses or a specific course by ID
-   * @param id - Optional course ID to fetch
-   * @returns Promise resolving to Course[] or PopulatedCourse
-   */
-  async fetchCourses(id?: number): Promise<Course[] | PopulatedCourse> {
-    try {
-      if (id) {
-        const response = await dispatch.get<PopulatedCourse>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/${id}/`);
-        return response.data;
-      }
-      const response = await dispatch.get<Course[]>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching ${id ? `course ${id}` : 'courses'}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Creates a new course
-   * @param data - The course data to create
-   * @returns Promise resolving to the created Course
-   */
-  async createCourse(data: Partial<Course>): Promise<Course> {
-    try {
-      const response = await dispatch.post<Course>(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/`, data);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating course:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Updates an existing course
-   * @param id - The ID of the course to update
-   * @param data - The updated course data
-   * @returns Promise resolving to the updated Course
-   */
-  async updateCourse(id: number, data: Partial<Course>): Promise<Course> {
-    try {
-      const response = await dispatch.patch<Course>(
-        `${COLLEGE_BASE_URL}/${COURSES_ROUTE}/${id}/`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating course ${id}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Deletes a course
-   * @param id - The ID of the course to delete
-   */
-  async deleteCourse(id: number): Promise<void> {
-    try {
-      await dispatch.delete(`${COLLEGE_BASE_URL}/${COURSES_ROUTE}/${id}/`);
-    } catch (error) {
-      console.error(`Error deleting course ${id}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Fetches enrollments with optional filtering parameters
-   * @param params - Optional parameters for filtering enrollments
-   * @returns Promise resolving to array of PopulatedEnrollment objects
-   */
-  async fetchEnrollments(params?: { course?: number; student?: number }): Promise<PopulatedEnrollment[]> {
-    try {
-      const queryParams = new URLSearchParams();
-      if (params?.course) queryParams.append('course', params.course.toString());
-      if (params?.student) queryParams.append('student', params.student.toString());
-
-      const url = `${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await dispatch.get<PopulatedEnrollment[]>(url);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching enrollments:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Creates a new enrollment
-   * @param data - The enrollment data to create
-   * @returns Promise resolving to the created Enrollment
-   */
-  async createEnrollment(data: { student: number; course: number }): Promise<Enrollment> {
-    try {
-      const response = await dispatch.post<Enrollment>(
-        `${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/`,
-        data
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error creating enrollment:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Deletes an enrollment
-   * @param id - The ID of the enrollment to delete
-   */
-  async deleteEnrollment(id: number): Promise<void> {
-    try {
-      await dispatch.delete(`${COLLEGE_BASE_URL}/${ENROLLMENTS_ROUTE}/${id}/`);
-    } catch (error) {
-      console.error(`Error deleting enrollment ${id}:`, error);
-      throw error;
-    }
+export class CourseService extends BaseService {
+  constructor() {
+    super(API_ROUTES.COURSES_ROUTE);
   }
-};
+
+  /**
+   * Get a list of courses with optional filtering
+   */
+  async getCourses(params?: QueryParams) {
+    return this.getList<Course>('', params);
+  }
+
+  /**
+   * Get a course by ID
+   */
+  async getCourseById(id: number) {
+    return this.getById<Course>(id);
+  }
+
+  /**
+   * Get a populated course by ID (with related data)
+   */
+  async getPopulatedCourse(id: number) {
+    return this.get<PopulatedCourse>(`${id}/details`);
+  }
+
+  /**
+   * Create a new course
+   */
+  async createCourse(courseData: Partial<Course>) {
+    return this.create<Course>(courseData);
+  }
+
+  /**
+   * Update a course
+   */
+  async updateCourse(id: number, courseData: Partial<Course>) {
+    return this.patch<Course>(id, courseData);
+  }
+
+  /**
+   * Delete a course
+   */
+  async deleteCourse(id: number) {
+    return this.delete<Course>(id);
+  }
+
+  /**
+   * Get schedule for a course
+   */
+  async getCourseSchedule(courseId: number) {
+    const url = API_ROUTES.COURSE_SCHEDULE.replace('{id}', courseId.toString());
+    return this.get<PaginatedResponse<CourseSchedule>>(url);
+  }
+
+  /**
+   * Update schedule for a course
+   */
+  async updateCourseSchedule(courseId: number, scheduleData: Partial<CourseSchedule>[]) {
+    const url = API_ROUTES.COURSE_SCHEDULE.replace('{id}', courseId.toString());
+    return this.patch<CourseSchedule[]>(url, scheduleData);
+  }
+
+  /**
+   * Get enrollments for a course
+   */
+  async getCourseEnrollments(courseId: number) {
+    return this.get<PaginatedResponse<CourseEnrollment>>(`${courseId}/enrollments`);
+  }
+
+  /**
+   * Add a student to a course
+   */
+  async enrollStudent(courseId: number, studentId: number) {
+    return this.post<CourseEnrollment>(`${courseId}/enrollments`, { student_id: studentId });
+  }
+
+  /**
+   * Remove a student from a course
+   */
+  async unenrollStudent(courseId: number, enrollmentId: number) {
+    return this.delete<void>(`${courseId}/enrollments/${enrollmentId}`);
+  }
+
+  /**
+   * Get courses by department
+   */
+  async getCoursesByDepartment(departmentId: number) {
+    return this.getList<Course>('', { department: departmentId });
+  }
+
+  /**
+   * Get courses by lecturer
+   */
+  async getCoursesByLecturer(lecturerId: number) {
+    return this.getList<Course>('', { lecturer: lecturerId });
+  }
+
+  /**
+   * Get active courses for the current semester
+   */
+  async getActiveCourses(semester?: string) {
+    return this.getList<Course>('', { 
+      is_active: true,
+      semester: semester || 'current'
+    });
+  }
+}
+
+// Create and export a singleton instance
+const courseService = new CourseService();
+export default courseService;

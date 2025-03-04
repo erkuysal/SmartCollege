@@ -37,13 +37,25 @@
 
           <!-- Show a success/info alert if RFID was written -->
           <v-alert
-            v-if="studentStore.rfidMessage"
+            v-if="rfidMessage"
             type="success"
             class="mb-4"
             border="start"
             elevation="2"
           >
-            {{ studentStore.rfidMessage }}
+            {{ rfidMessage }}
+          </v-alert>
+
+          <!-- Debug info -->
+          <v-alert
+            type="info"
+            class="mb-4"
+            border="start"
+            elevation="2"
+          >
+            Loading: {{ studentStore.loading }}<br>
+            Items count: {{ studentStore.items ? studentStore.items.length : 0 }}<br>
+            Items: {{ JSON.stringify(studentStore.items) }}
           </v-alert>
 
           <!-- Optional: a linear progress bar while loading -->
@@ -56,11 +68,11 @@
 
           <!-- The Data Table -->
           <v-data-table
-            v-if="studentStore.students.length"
+            v-if="studentStore.items && studentStore.items.length"
             :headers="headers"
-            :items="studentStore.students"
+            :items="studentStore.items"
             :items-per-page="5"
-            item-key="student_number"
+            item-key="id"
             class="elevation-1"
           >
             <!-- Actions column -->
@@ -89,7 +101,7 @@
                 variant="outlined"
                 color="secondary"
                 size="small"
-                @click="handleWriteRFID(item)"
+                @click="handleAssignRFID(item)"
               >
                 Write RFID
               </v-btn>
@@ -125,12 +137,17 @@ const route = useRoute();
 // Pinia store
 const studentStore = useStudentStore();
 
+// Local state
+const rfidMessage = ref<string | null>(null);
+
 // Headers for the data table
 const headers = ref([
   { title: 'Student #', key: 'student_number' },
   { title: 'First Name', key: 'first_name' },
   { title: 'Last Name', key: 'last_name' },
   { title: 'Email', key: 'email' },
+  { title: 'Faculty', key: 'faculty_name' },
+  { title: 'Status', key: 'student_status' },
   { title: 'Actions', key: 'actions', sortable: false },
 ]);
 
@@ -150,7 +167,21 @@ watch(
 
 // Reload students
 async function reloadStudents() {
-  await studentStore.fetchStudents();
+  console.log('Reloading students...');
+  try {
+    await studentStore.fetchStudents();
+    console.log('Students loaded:', studentStore.items);
+    
+    // Add more detailed logging
+    if (studentStore.items && studentStore.items.length > 0) {
+      console.log('First student:', studentStore.items[0]);
+      console.log('Student properties:', Object.keys(studentStore.items[0]));
+    } else {
+      console.log('No students found in the store');
+    }
+  } catch (error) {
+    console.error('Error loading students:', error);
+  }
 }
 
 // Navigation
@@ -160,14 +191,14 @@ function navigateToAddStudent() {
 
 // Other student actions
 function editStudent(student: Student) {
-  router.push({ name: 'editStudent', params: { id: student.student_number } });
+  router.push({ name: 'editStudent', params: { id: student.id } });
 }
 
 async function handleDeleteStudent(student: Student) {
   const confirmed = window.confirm(`Delete student #${student.student_number}?`);
   if (confirmed) {
     try {
-      await studentStore.deleteStudent(student.student_number);
+      await studentStore.deleteStudent(student.id);
       await reloadStudents();
     } catch (error) {
       console.error('Failed to delete student:', error);
@@ -175,16 +206,27 @@ async function handleDeleteStudent(student: Student) {
   }
 }
 
-async function handleWriteRFID(student: Student) {
+async function handleAssignRFID(student: Student) {
   try {
-    await studentStore.writeRFID(student.student_number);
+    // Prompt for RFID card ID
+    const cardId = prompt('Enter RFID card ID:');
+    if (cardId) {
+      await studentStore.assignRFIDCard(student.id, cardId);
+      rfidMessage.value = `RFID card ${cardId} assigned to student ${student.student_number}`;
+      setTimeout(() => {
+        rfidMessage.value = null;
+      }, 5000);
+    }
   } catch (error) {
-    console.error('Failed to write RFID:', error);
+    console.error('Failed to assign RFID:', error);
   }
 }
 
 // Fetch data on mount
-onMounted(reloadStudents);
+onMounted(() => {
+  console.log('StudentsView mounted');
+  reloadStudents();
+});
 </script>
 
 <style scoped>

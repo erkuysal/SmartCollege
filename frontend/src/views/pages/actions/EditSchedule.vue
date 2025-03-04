@@ -13,7 +13,7 @@
               <v-col cols="12" md="6">
                 <v-select
                   v-model="formData.course"
-                  :items="courseStore.courses"
+                  :items="courseStore.items"
                   label="Course"
                   item-title="title"
                   item-value="id"
@@ -144,10 +144,10 @@ const scheduleStore = useScheduleStore();
 // Form state
 const form = ref<null | { resetValidation: () => void }>(null);
 const isValid = ref(false);
-const formData = ref<Omit<Schedule, 'id'>>({
-  course: 0,
+const formData = ref<Partial<Schedule>>({
+  course: undefined,
   classroom: props.classroomId,
-  day_of_week: 0,
+  day_of_week: undefined,
   start_time: '',
   end_time: '',
   start_date: '',
@@ -190,9 +190,9 @@ watch(() => props.editingSchedule, (newSchedule) => {
 // Methods
 function resetForm() {
   formData.value = {
-    course: 0,
+    course: undefined,
     classroom: props.classroomId,
-    day_of_week: 0,
+    day_of_week: undefined,
     start_time: '',
     end_time: '',
     start_date: '',
@@ -207,10 +207,21 @@ async function saveSchedule() {
   if (!isValid.value) return;
 
   try {
+    // Ensure all required fields are present
+    if (!formData.value.course || formData.value.day_of_week === undefined) {
+      console.error('Missing required fields');
+      return;
+    }
+
+    const scheduleData: Partial<Schedule> = {
+      ...formData.value,
+      classroom: props.classroomId // Ensure classroom ID is set
+    };
+
     if (props.editingSchedule) {
-      await scheduleStore.updateSchedule(props.editingSchedule.id, formData.value);
+      await scheduleStore.updateSchedule(props.editingSchedule.id, scheduleData);
     } else {
-      await scheduleStore.createSchedule(formData.value);
+      await scheduleStore.createSchedule(scheduleData as Schedule);
     }
     emit('saved');
     closeDialog();
@@ -227,7 +238,9 @@ function closeDialog() {
 // Load courses on mount
 onMounted(async () => {
   try {
-    await courseStore.fetchCourses();
+    if (!courseStore.items.length) {
+      await courseStore.fetchCourses();
+    }
   } catch (error) {
     console.error('Error loading courses:', error);
   }

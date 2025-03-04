@@ -42,12 +42,12 @@
     <v-data-table
       v-if="viewType === 'table'"
       :headers="headers"
-      :items="courseStore.courses"
+      :items="courseStore.items"
       :loading="courseStore.loading"
       class="mt-4"
     >
-      <template #item.teacher="{ item }">
-        {{ getTeacherName(item.teacher) }}
+      <template #item.lecturer="{ item }">
+        {{ getLecturerName(item.lecturer) }}
       </template>
 
       <template #item.actions="{ item }">
@@ -86,7 +86,7 @@
     <!-- Card View -->
     <v-row v-else class="mt-4">
       <v-col
-        v-for="course in courseStore.courses"
+        v-for="course in courseStore.items"
         :key="course.id"
         cols="12"
         sm="6"
@@ -95,14 +95,14 @@
       >
         <v-card>
           <v-card-title class="text-h6">
-            {{ course.title }}
+            {{ course.name }}
           </v-card-title>
 
           <v-card-text>
             <p class="mb-2">{{ course.description || 'No description available' }}</p>
             <v-chip class="mb-2">
               <v-icon start>mdi-account-tie</v-icon>
-              {{ getTeacherName(course.teacher) }}
+              {{ getLecturerName(course.lecturer) }}
             </v-chip>
           </v-card-text>
 
@@ -152,10 +152,19 @@
               <v-row>
                 <v-col cols="12">
                   <v-text-field
-                    v-model="formData.title"
+                    v-model="formData.code"
                     label="Course Code"
                     required
                     :rules="[v => !!v || 'Course code is required']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="formData.name"
+                    label="Course Name"
+                    required
+                    :rules="[v => !!v || 'Course name is required']"
                   ></v-text-field>
                 </v-col>
 
@@ -169,13 +178,13 @@
 
                 <v-col cols="12">
                   <v-select
-                    v-model="formData.teacher"
-                    :items="teacherStore.teachers"
+                    v-model="formData.lecturer"
+                    :items="lecturerStore.items"
                     item-title="first_name"
                     item-value="id"
-                    label="Teacher"
+                    label="Lecturer"
                     required
-                    :rules="[v => !!v || 'Teacher is required']"
+                    :rules="[v => !!v || 'Lecturer is required']"
                   >
                     <template #item="{ item }">
                       {{ item.raw.first_name }} {{ item.raw.last_name }}
@@ -212,18 +221,19 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCourseStore } from '@/utils/stores/college/courseStore';
-import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import { useLecturerStore } from '@/utils/stores/users/lecturerStore';
 import type { Course, PopulatedCourse } from '@/utils/interfaces/college/courseInterface';
 
 const courseStore = useCourseStore();
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 const router = useRouter();
 
 // Table headers
 const headers = [
-  { title: 'Course Code', key: 'title', sortable: true },
+  { title: 'Course Code', key: 'code', sortable: true },
+  { title: 'Course Name', key: 'name', sortable: true },
   { title: 'Description', key: 'description', sortable: true },
-  { title: 'Teacher', key: 'teacher', sortable: true },
+  { title: 'Lecturer', key: 'lecturer', sortable: true },
   { title: 'Actions', key: 'actions', sortable: false }
 ];
 
@@ -235,19 +245,20 @@ const form = ref<any>(null);
 const viewType = ref('table');
 
 const formData = ref({
-  title: '',
+  code: '',
+  name: '',
   description: '',
-  teacher: undefined as number | undefined
+  lecturer: undefined as number | undefined
 });
 
 // Methods
-function getTeacherName(teacher: number | { id: number; first_name: string; last_name: string; email: string; } | undefined): string {
-  if (!teacher) return 'Not Assigned';
-  if (typeof teacher === 'number') {
-    const teacherData = teacherStore.teacherById(teacher);
-    return teacherData ? `${teacherData.first_name} ${teacherData.last_name}` : 'Unknown Teacher';
+function getLecturerName(lecturer: number | { id: number; first_name: string; last_name: string; email: string; } | undefined): string {
+  if (!lecturer) return 'Not Assigned';
+  if (typeof lecturer === 'number') {
+    const lecturerData = lecturerStore.lecturerById(lecturer);
+    return lecturerData ? `${lecturerData.first_name} ${lecturerData.last_name}` : 'Unknown Lecturer';
   }
-  return `${teacher.first_name} ${teacher.last_name}`;
+  return `${lecturer.first_name} ${lecturer.last_name}`;
 }
 
 function openAddCourseDialog() {
@@ -257,17 +268,30 @@ function openAddCourseDialog() {
 }
 
 function editCourse(course: Course | PopulatedCourse) {
+  const departmentId = typeof course.department === 'number' 
+    ? course.department 
+    : course.department.id;
+    
   editingCourse.value = {
     id: course.id,
-    title: course.title,
+    code: course.code,
+    name: course.name,
     description: course.description,
-    teacher: typeof course.teacher === 'number' ? course.teacher : course.teacher?.id
+    credits: course.credits,
+    department: departmentId,
+    is_active: course.is_active,
+    lecturer: typeof course.lecturer === 'number' ? course.lecturer : course.lecturer?.id,
+    created_at: course.created_at,
+    updated_at: course.updated_at
   };
+  
   formData.value = {
-    title: course.title,
+    code: course.code,
+    name: course.name,
     description: course.description || '',
-    teacher: typeof course.teacher === 'number' ? course.teacher : course.teacher?.id
+    lecturer: typeof course.lecturer === 'number' ? course.lecturer : course.lecturer?.id
   };
+  
   dialogVisible.value = true;
 }
 
@@ -277,15 +301,17 @@ async function saveCourse() {
   try {
     if (editingCourse.value) {
       await courseStore.updateCourse(editingCourse.value.id, {
-        title: formData.value.title,
+        code: formData.value.code,
+        name: formData.value.name,
         description: formData.value.description,
-        teacher: formData.value.teacher
+        lecturer: formData.value.lecturer
       });
     } else {
       await courseStore.createCourse({
-        title: formData.value.title,
+        code: formData.value.code,
+        name: formData.value.name,
         description: formData.value.description,
-        teacher: formData.value.teacher!
+        lecturer: formData.value.lecturer!
       });
     }
     closeDialog();
@@ -311,9 +337,10 @@ function closeDialog() {
 
 function resetForm() {
   formData.value = {
-    title: '',
+    code: '',
+    name: '',
     description: '',
-    teacher: undefined
+    lecturer: undefined
   };
   if (form.value) {
     form.value.resetValidation();
@@ -332,12 +359,12 @@ onMounted(async () => {
   try {
     await Promise.all([
       courseStore.fetchCourses(),
-      teacherStore.fetchTeachers()
+      lecturerStore.fetchLecturers()
     ]);
   } catch (error) {
     console.error('Error loading data:', error);
     courseStore.resetState();
-    teacherStore.resetState();
+    lecturerStore.resetState();
   }
 });
 </script>

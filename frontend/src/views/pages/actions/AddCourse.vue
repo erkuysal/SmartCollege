@@ -1,8 +1,8 @@
 <template>
-  <v-dialog v-model="dialogModel" max-width="600px">
+  <v-dialog v-model="isVisible" max-width="600px">
     <v-card>
       <v-card-title>
-        <span class="text-h5">{{ editingCourse ? 'Edit Course' : 'Add New Course' }}</span>
+        <span class="text-h5">{{ modalTitle }}</span>
       </v-card-title>
 
       <v-card-text>
@@ -12,7 +12,7 @@
               <!-- Course Title -->
               <v-col cols="12">
                 <v-text-field
-                  v-model="formData.title"
+                  v-model="formData.name"
                   label="Course Title"
                   required
                   :rules="[v => !!v || 'Title is required']"
@@ -31,12 +31,12 @@
               <!-- Teacher Selection -->
               <v-col cols="12">
                 <v-select
-                  v-model="formData.teacher"
-                  :items="teachers"
+                  v-model="formData.lecturer"
+                  :items="lecturers"
                   label="Assign Teacher"
                   item-title="full_name"
                   item-value="id"
-                  :loading="teacherStore.isLoading"
+                  :loading="isLoading"
                   clearable
                 >
                   <template v-slot:item="{ props, item }">
@@ -70,10 +70,10 @@
           color="primary"
           variant="text"
           @click="saveCourse"
-          :loading="courseStore.loading"
+          :loading="isLoading"
           :disabled="!isValid"
         >
-          Save
+          {{ submitButtonText }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -83,10 +83,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { PropType } from 'vue';
-import { useTeacherStore } from '@/utils/stores/users/teacherStore';
+import { useLecturerStore } from '@/utils/stores/users/lecturerStore';
 import { useCourseStore } from '@/utils/stores/college/courseStore';
-import type { Course } from '@/utils/interfaces/college/courseInterface';
-import type { Teacher } from '@/utils/interfaces/users/teacherInterface';
+import type { Course, PopulatedCourse } from '@/utils/interfaces/college/courseInterface';
+import type { Lecturer } from '@/utils/interfaces/users/lecturerInterface';
 
 // Props and emits
 const props = defineProps({
@@ -95,7 +95,7 @@ const props = defineProps({
     required: true
   },
   editingCourse: {
-    type: Object as PropType<Course | null>,
+    type: Object as PropType<PopulatedCourse | null>,
     default: null
   }
 });
@@ -103,29 +103,40 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'saved']);
 
 // Store instances
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 const courseStore = useCourseStore();
 
 // Form state
 const form = ref<any>(null);
 const isValid = ref(false);
+
+// Form data
 const formData = ref({
-  title: '',
+  name: '',
   description: '',
-  teacher: undefined as number | undefined
+  lecturer: undefined as number | undefined
 });
 
-// Computed
-const dialogModel = computed({
+// Loading state
+const isSubmitting = ref(false);
+const isLoading = computed(() => lecturerStore.loading || courseStore.loading);
+
+// Computed properties
+const isEditing = computed(() => !!props.editingCourse);
+const modalTitle = computed(() => isEditing.value ? 'Edit Course' : 'Add New Course');
+const submitButtonText = computed(() => isEditing.value ? 'Update Course' : 'Create Course');
+
+// Modal visibility
+const isVisible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 });
 
-const teachers = computed(() =>
-  teacherStore.teachers.map(teacher => ({
-    id: teacher.id,
-    full_name: `${teacher.first_name} ${teacher.last_name}`,
-    email: teacher.email
+const lecturers = computed(() =>
+  lecturerStore.items.map(lecturer => ({
+    id: lecturer.id,
+    full_name: `${lecturer.first_name} ${lecturer.last_name}`,
+    email: lecturer.email
   }))
 );
 
@@ -133,9 +144,9 @@ const teachers = computed(() =>
 watch(() => props.editingCourse, (newCourse) => {
   if (newCourse) {
     formData.value = {
-      title: newCourse.title,
+      name: newCourse.name,
       description: newCourse.description || '',
-      teacher: newCourse.teacher
+      lecturer: newCourse.lecturers?.[0]?.id
     };
   } else {
     resetForm();
@@ -145,9 +156,9 @@ watch(() => props.editingCourse, (newCourse) => {
 // Methods
 function resetForm() {
   formData.value = {
-    title: '',
+    name: '',
     description: '',
-    teacher: undefined
+    lecturer: undefined
   };
   if (form.value) {
     form.value.resetValidation();
@@ -158,10 +169,21 @@ async function saveCourse() {
   if (!isValid.value) return;
 
   try {
+    // Create a properly typed course object
+    const courseData: Partial<Course> = {
+      name: formData.value.name,
+      description: formData.value.description,
+    };
+    
+    // Only include lecturer if it's defined
+    if (formData.value.lecturer !== undefined) {
+      courseData.lecturer = formData.value.lecturer;
+    }
+
     if (props.editingCourse) {
-      await courseStore.updateCourse(props.editingCourse.id, formData.value);
+      await courseStore.updateCourse(props.editingCourse.id, courseData);
     } else {
-      await courseStore.createCourse(formData.value);
+      await courseStore.createCourse(courseData);
     }
     emit('saved');
     closeDialog();
@@ -171,7 +193,7 @@ async function saveCourse() {
 }
 
 function closeDialog() {
-  dialogModel.value = false;
+  isVisible.value = false;
   resetForm();
 }
 </script>
@@ -181,3 +203,4 @@ function closeDialog() {
   word-break: break-word;
 }
 </style>
+

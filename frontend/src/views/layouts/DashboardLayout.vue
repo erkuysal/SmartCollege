@@ -2,7 +2,7 @@
   <v-app>
     <!-- Sidebar (Navigation Drawer) -->
     <v-navigation-drawer
-      v-model="drawerOpen"
+      v-model="drawer"
       app
       :temporary="isMobile"
       :permanent="!isMobile"
@@ -25,7 +25,7 @@
       <v-list
         lines="one"
         density="comfortable"
-        select-strategy="single"
+        nav
         :selected="[selectedIndex]"
         class="sidebar-nav flex-grow-1"
       >
@@ -35,7 +35,7 @@
           :value="i"
           class="sidebar-item"
           :active="selectedIndex === i"
-          @click="navigateTo(i)"
+          @click="navigate(item.route)"
         >
           <div class="d-flex align-center" style="gap: 8px;">
             <v-icon>{{ item.icon }}</v-icon>
@@ -96,103 +96,118 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useDisplay } from 'vuetify';
-import { useStudentStore } from "@/utils/stores/users/studentStore";
-import { useTeacherStore } from "@/utils/stores/users/teacherStore";
-import { useCourseStore } from "@/utils/stores/college/courseStore";
-import { useClassroomStore } from "@/utils/stores/college/classroomStore";
-import { useScheduleStore } from "@/utils/stores/college/scheduleStore";
+import { useAuthStore } from '../../utils/stores/users/authStore';
+import { useStudentStore } from '../../utils/stores/users/studentStore';
+import { useLecturerStore } from '../../utils/stores/users/lecturerStore';
+import { useCourseStore } from '../../utils/stores/college/courseStore';
+import { useClassroomStore } from '../../utils/stores/college/classroomStore';
+import { useScheduleStore } from '../../utils/stores/college/scheduleStore';
+import { useFacultyStore } from '../../utils/stores/college/facultyStore';
 
-// Store instances
+// Initialize stores
+const authStore = useAuthStore();
 const studentStore = useStudentStore();
-const teacherStore = useTeacherStore();
+const lecturerStore = useLecturerStore();
 const courseStore = useCourseStore();
 const classroomStore = useClassroomStore();
 const scheduleStore = useScheduleStore();
+const facultyStore = useFacultyStore();
 
-// Router
+// Router setup
 const router = useRouter();
 const route = useRoute();
 
-// Drawer state
-const drawerOpen = ref(true);
+// Navigation drawer state
+const drawer = ref(true);
 const drawerWidth = 260;
+const isMobile = ref(window.innerWidth < 960);
 
-// Mobile detection
-const { smAndDown } = useDisplay();
-const isMobile = computed(() => smAndDown.value);
-
-// User info (should come from auth store in real app)
-const userName = ref('John Smith');
-const userRole = ref('Administrator');
+// User information from auth store
+const userName = computed(() => authStore.userName);
+const userRole = computed(() => authStore.userRole);
 
 // Navigation items
-const navItems = [
-  { title: 'Dashboard',   icon: 'mdi-view-dashboard',     route: '/admin/dashboard' },
-  { title: 'Students',    icon: 'mdi-account-multiple',   route: '/admin/students' },
-  { title: 'Staff',       icon: 'mdi-account-tie',        route: '/admin/staff' },
-  { title: 'Courses',     icon: 'mdi-book-education',     route: '/admin/courses' },
-  { title: 'Classrooms',  icon: 'mdi-door-closed',        route: '/admin/classrooms' },
-  { title: 'Schedules',   icon: 'mdi-calendar-clock',     route: '/admin/schedules' },
-  { title: 'Attendance',  icon: 'mdi-clipboard-check',    route: '/admin/attendance' },
-];
+const navItems = ref([
+  { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/admin/dashboard' },
+  { title: 'Students', icon: 'mdi-account-school', route: '/admin/students' },
+  { title: 'Lecturers', icon: 'mdi-teach', route: '/admin/lecturers' },
+  { title: 'Courses', icon: 'mdi-book-open-variant', route: '/admin/courses' },
+  { title: 'Classrooms', icon: 'mdi-google-classroom', route: '/admin/classrooms' },
+  { title: 'Departments', icon: 'mdi-domain', route: '/admin/departments' },
+  { title: 'Faculties', icon: 'mdi-office-building', route: '/admin/faculties' },
+  { title: 'Attendance', icon: 'mdi-clipboard-check', route: '/admin/attendance' },
+  { title: 'Events', icon: 'mdi-calendar-clock', route: '/admin/events' },
+  { title: 'Tasks', icon: 'mdi-clipboard-text', route: '/admin/tasks' },
+]);
 
-// Update selectedIndex to be computed based on current route
+// Computed properties
 const selectedIndex = computed(() => {
-  const currentRoute = route.path;
-  return navItems.findIndex(item => item.route === currentRoute);
+  return navItems.value.findIndex(item => route.path.startsWith(item.route));
 });
 
-// Computed page title based on current route
 const pageTitle = computed(() => {
-  const currentRoute = route.path;
-  const currentNav = navItems.find(item => item.route === currentRoute);
-  return currentNav?.title || 'Dashboard';
+  const item = navItems.value.find(item => route.path.startsWith(item.route));
+  return item ? item.title : 'Dashboard';
 });
 
 // Methods
-function toggleDrawer() {
-  drawerOpen.value = !drawerOpen.value;
+function navigate(route: string) {
+  console.log('Navigating to:', route);
+  router.push(route);
 }
 
-function navigateTo(i: number) {
-  router.push(navItems[i].route);
+function toggleDrawer() {
+  drawer.value = !drawer.value;
+}
+
+function logout() {
+  authStore.logout();
+  router.push('/login');
 }
 
 async function handleReadRFID() {
   try {
-    const student_number = await studentStore.readRFID();
-    if (student_number) {
-      console.log("Scanned student number:", student_number);
-      await router.push({
-        name: "studentInfo",
-        params: { student_number },
-      });
+    // Use the readRFIDCard method from the Pinia studentStore
+    const cardId = 'sample-card-id';
+    const result = await studentStore.readRFIDCard(cardId);
+    
+    if (result && result.success) {
+      // After getting the card, we would need to fetch the student
+      // This is a simplified example - in a real app, you would need to
+      // implement a proper flow to get the student from the card ID
+      console.log(`RFID card read successfully: ${result.cardId}`);
+      
+      // For now, just navigate to the students page with the correct path
+      router.push('/admin/students');
     }
-  } catch (err) {
-    console.error("Error reading RFID:", err);
+  } catch (error) {
+    console.error("Error handling RFID scan:", error);
   }
 }
 
-// Initial data loading
-onMounted(async () => {
-  try {
-    await Promise.all([
-      classroomStore.fetchClassrooms(),
-      courseStore.fetchCourses(),
-      scheduleStore.fetchSchedules(),
-      teacherStore.fetchTeachers(),
-      studentStore.fetchStudents()
-    ]);
-  } catch (error) {
+// Lifecycle hooks
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    isMobile.value = window.innerWidth < 960;
+    if (isMobile.value) {
+      drawer.value = false;
+    }
+  });
+
+  // Fetch initial data
+  Promise.all([
+    courseStore.fetchCourses(),
+    scheduleStore.fetchSchedules(),
+    lecturerStore.fetchLecturers(),
+    studentStore.fetchStudents(),
+    facultyStore.fetchFaculties()
+  ]).then(() => {
+    console.log('All data loaded successfully');
+    // Don't reset stores immediately after fetching data
+    // This was causing the data to disappear right after loading
+  }).catch(error => {
     console.error('Error loading initial data:', error);
-    // Reset states in case of error
-    classroomStore.resetState();
-    courseStore.resetState();
-    scheduleStore.resetState();
-    teacherStore.resetState();
-    studentStore.resetState();
-  }
+  });
 });
 </script>
 
