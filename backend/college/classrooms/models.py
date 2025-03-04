@@ -21,11 +21,16 @@ class Classroom(models.Model):
     def is_in_use(self):
         """Check if the classroom is currently in use based on the schedule."""
         now = timezone.now()
+        current_time = now.time()
+        current_day = now.weekday()  # 0 is Monday, 6 is Sunday
+        
+        # Filter schedules for this classroom that are active and match the current day
         return Schedule.objects.filter(
             classroom=self,
-            start_time__lte=now,
-            end_time__gte=now,
-            status='Scheduled'
+            time_slot__day_of_week=current_day,
+            time_slot__start_time__lte=current_time,
+            time_slot__end_time__gte=current_time,
+            is_active=True
         ).exists()
 
     def __str__(self):

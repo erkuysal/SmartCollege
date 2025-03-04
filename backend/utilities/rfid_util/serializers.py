@@ -1,19 +1,19 @@
 from rest_framework import serializers
 from users.base.models import User
-from .models import RFIDTag
+from .models import RFIDCard
 
 from users.students.models import Student
 from users.lecturers.models import Lecturer
 
 
-class RFIDTagSerializer(serializers.ModelSerializer):
+class RFIDCardSerializer(serializers.ModelSerializer):
     class Meta:
-        model = RFIDTag
+        model = RFIDCard
         fields = ['tag_id', 'issued_at', 'last_used_at', 'is_active']
 
 
 class UserRFIDSerializer(serializers.ModelSerializer):
-    rfid_tag = RFIDTagSerializer(read_only=True)
+    rfid_tag = serializers.CharField(read_only=True)
     
     class Meta:
         model = User
@@ -37,5 +37,5 @@ class WriteRFIDResponseSerializer(serializers.Serializer):
 class RFIDResponseSerializer(serializers.Serializer):
     user_type = serializers.CharField()
     user = UserRFIDSerializer()
-    rfid = RFIDTagSerializer()
+    rfid = RFIDCardSerializer()
 

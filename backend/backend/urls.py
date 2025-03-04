@@ -11,9 +11,9 @@ urlpatterns = [
     path('api/academics/', include('academics.urls')),
     path('api/college/', include('college.urls')),
 
-    # UNDER CONSTRUCTION
-    # path('api/security/', include('security.urls')),
-    # path('api/transactions/', include('transactions.urls')),
+    # Security and Transactions modules
+    path('api/security/', include('security.urls')),
+    path('api/transactions/', include('transactions.urls')),
 
     # Utilities
     path('api/utilities/', include('utilities.urls')),

@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from users.lecturers.models import Lecturer
 from college.courses.models import Course
@@ -15,6 +16,20 @@ class LecturerCourse(models.Model):
         ordering = ['academic_year', 'semester']
 
     def __str__(self):
-        return f"{self.lecturer.user.username} teaches {self.course.course_name} ({self.semester}, {self.academic_year})"
+        return f"{self.lecturer.user.username} teaches {self.course.name} ({self.semester}, {self.academic_year})"
+
+    def clean(self):
+        # Check lecturer qualification
+        if not self.lecturer.is_qualified_for_course(self.course):
+            raise ValidationError("Lecturer not qualified for this course")
+
+        # Check workload
+        current_courses = LecturerCourse.objects.filter(
+            lecturer=self.lecturer,
+            semester=self.semester,
+            academic_year=self.academic_year
+        ).count()
+        if current_courses >= self.lecturer.max_courses:
+            raise ValidationError("Lecturer workload exceeded")
 
 

@@ -5,9 +5,9 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .serial_bridge import read_from_arduino, send_to_arduino_write
-from .models import RFIDTag
+from .models import RFIDCard
 from .serializers import (
-    RFIDTagSerializer,
+    RFIDCardSerializer,
     RFIDResponseSerializer,
     UserRFIDSerializer,
     WriteRFIDRequestSerializer
@@ -23,9 +23,9 @@ from users.lecturers.serializers import LecturerSerializer
 from users.staff.serializers import StaffSerializer
 
 
-class RFIDTagViewSet(viewsets.ModelViewSet):
-    queryset = RFIDTag.objects.all()
-    serializer_class = RFIDTagSerializer
+class RFIDCardViewSet(viewsets.ModelViewSet):
+    queryset = RFIDCard.objects.all()
+    serializer_class = RFIDCardSerializer
 
 
 class RFIDReaderView(APIView):
@@ -53,21 +53,21 @@ class RFIDReaderView(APIView):
         tag_id = response.get("data")
 
         try:
-            rfid_tag = RFIDTag.objects.select_related('user').get(
+            rfid_card = RFIDCard.objects.select_related('user').get(
                 tag_id=tag_id, 
                 is_active=True
             )
-            user = rfid_tag.user
+            user = rfid_card.user
 
             # Record RFID usage
-            rfid_tag.record_usage()
+            rfid_card.record_usage()
 
             response_data = {
                 "user_type": user.role,
                 "user": UserRFIDSerializer(user).data,
                 "rfid": {
-                    "tag_id": rfid_tag.tag_id,
-                    "last_used": rfid_tag.last_used_at
+                    "tag_id": rfid_card.tag_id,
+                    "last_used": rfid_card.last_used_at
                 }
             }
 
@@ -75,7 +75,7 @@ class RFIDReaderView(APIView):
                 RFIDResponseSerializer(response_data).data
             )
 
-        except RFIDTag.DoesNotExist:
+        except RFIDCard.DoesNotExist:
             return Response(
                 {"error": "No active user found for this RFID tag."}, 
                 status=status.HTTP_404_NOT_FOUND
@@ -110,8 +110,8 @@ class WriteRFIDView(APIView):
         try:
             user = User.objects.get(id=user_id)
             
-            # Create or update RFID tag
-            RFIDTag.objects.update_or_create(
+            # Create or update RFID card
+            RFIDCard.objects.update_or_create(
                 user=user,
                 defaults={
                     'tag_id': rfid_tag,
@@ -119,12 +119,6 @@ class WriteRFIDView(APIView):
                     'issued_at': timezone.now()
                 }
             )
-
-            # Update user's rfid_tag field
-            user.rfid_tag = rfid_tag
-            user.save(update_fields=['rfid_tag'])
-
-            send_to_arduino_write(rfid_tag)
             
             return Response(
                 UserRFIDSerializer(user).data,

@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-198jya$3n6^1l6lbp&__tiyepth7nu+$0tr_*@ay3_e7p^_@2y'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-198jya$3n6^1l6lbp&__tiyepth7nu+$0tr_*@ay3_e7p^_@2y')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
 
 AUTH_USER_MODEL = 'base.User'
 
@@ -50,10 +55,15 @@ INSTALLED_APPS = [
     # ---------- LOCAL -----------
     # --- College ---
     'college.departments',
+    'college.faculties',
     'college.courses',
     'college.classrooms',
     'college.facilities',  # NEW: Adds hostel, cafeteria, library, etc.
     'college.schedules',
+    # ---
+    # 'college.schedules.apps.SchedulesConfig',
+    # 'college.courses.apps.CoursesConfig',
+    # 'college.classrooms.apps.ClassroomsConfig',
 
     # --- Users ---
     'users.base',  # NEW: Common user authentication (login, roles)

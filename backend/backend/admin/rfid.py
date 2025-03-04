@@ -1,8 +1,8 @@
 from django.contrib import admin
-from utilities.rfid_util.models import RFIDTag
+from utilities.rfid_util.models import RFIDCard
 
 
-class RFIDTagAdmin(admin.ModelAdmin):
+class RFIDCardAdmin(admin.ModelAdmin):
     list_display = ('user_email', 'tag_id', 'issued_at')
     search_fields = ('user__email', 'tag_id')
 
@@ -12,5 +12,5 @@ class RFIDTagAdmin(admin.ModelAdmin):
 
 
 models_to_register = [
-    (RFIDTag, RFIDTagAdmin),
+    (RFIDCard, RFIDCardAdmin),
 ]

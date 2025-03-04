@@ -1,10 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from utilities.rfid_util.views import RFIDTagViewSet, RFIDReaderView, WriteRFIDView
+from utilities.rfid_util.views import RFIDCardViewSet, RFIDReaderView, WriteRFIDView
 
 router = DefaultRouter()
-router.register(r'', RFIDTagViewSet)
+router.register(r'', RFIDCardViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -4,8 +4,8 @@ from django.utils import timezone
 from users.base.models import User
 
 
-class RFIDTag(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="rfid_profile")
+class RFIDCard(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="rfid_card")
     tag_id = models.CharField(max_length=50, unique=True, help_text="Unique RFID Tag ID")
     issued_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)

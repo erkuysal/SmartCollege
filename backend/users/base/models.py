@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.auth import get_user_model  # ✅ Avoid circular import
+from drf_spectacular.utils import extend_schema_field  # Add this import
+from rest_framework import serializers  # Add this import
 
 
 class UserManager(BaseUserManager):
@@ -10,20 +12,31 @@ class UserManager(BaseUserManager):
 
     def create_user(self, username, email, password=None, role="Student", rfid_tag=None, **extra_fields):
         """
-        Creates and returns a regular user with a fixed role.
+        Creates and returns a regular user with the specified role.
         """
         if not email:
             raise ValueError("Users must have an email address")
         if not username:
             raise ValueError("Users must have a username")
 
-        role = "Student"  # Default role is Student
+        # Validate role
+        User = get_user_model()  # ✅ Fetch dynamically to prevent circular import
+        valid_roles = [choice[0] for choice in User.ROLES]
+        if role not in valid_roles:
+            raise ValueError(f"Invalid role. Must be one of: {', '.join(valid_roles)}")
 
         email = self.normalize_email(email)
-        User = get_user_model()  # ✅ Fetch dynamically to prevent circular import
-        user = User(username=username, email=email, role=role, rfid_tag=rfid_tag, **extra_fields)
+        user = User(username=username, email=email, role=role, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
+        
+        # If RFID tag is provided, create an RFID card for the user
+        if rfid_tag:
+            try:
+                from utilities.rfid_util.models import RFIDCard
+                RFIDCard.objects.create(user=user, tag_id=rfid_tag, is_active=True)
+            except ImportError:
+                pass  # RFID module not available
 
         return user
 
@@ -76,8 +89,8 @@ class User(AbstractUser):
     ]
 
     role = models.CharField(max_length=20, choices=ROLES, default='Student', help_text="User role in the system")
-    rfid_tag = models.CharField(max_length=50, unique=True, null=True, blank=True,
-                              help_text="RFID Tag assigned to user")
+    # Remove direct RFID field from User model to avoid duplication
+    # Instead, we'll use a OneToOneField from the RFID model in utilities.rfid_util
 
     objects = UserManager()
 
@@ -91,3 +104,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+        
+    @property
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def rfid_tag(self):
+        """
+        Get the RFID tag associated with this user.
+        This maintains backward compatibility with code that uses user.rfid_tag
+        """
+        try:
+            from utilities.rfid_util.models import RFIDCard
+            card = RFIDCard.objects.filter(user=self, is_active=True).first()
+            return card.tag_id if card else None
+        except ImportError:
+            return None

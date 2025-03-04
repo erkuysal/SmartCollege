@@ -5,7 +5,7 @@ from .models import Enrollment
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     student_name = serializers.ReadOnlyField(source="student.user.username")
-    course_name = serializers.ReadOnlyField(source="course.course_name")
+    course_name = serializers.ReadOnlyField(source="course.name")
 
     class Meta:
         model = Enrollment

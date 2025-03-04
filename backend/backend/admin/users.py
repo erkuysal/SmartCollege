@@ -21,7 +21,7 @@ class CustomUserAdmin(UserAdmin):
 class StudentAdmin(admin.ModelAdmin):
     list_display = [
         'user',
-        'department',
+        'faculty',
         'student_status',  # Changed from 'status'
         'semester',
         'rfid_tag',
@@ -30,7 +30,7 @@ class StudentAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'student_status',  # Changed from 'status'
-        'department',
+        'faculty',
         'semester'
     ]
     search_fields = ('user__email', 'rfid_tag')
