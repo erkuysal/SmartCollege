@@ -56,12 +56,37 @@ export const useCourseStore = defineStore('course', () => {
       };
       
       const response = await courseService.getCourses(queryParams);
-      items.value = response.data.results;
-      pagination.value = {
-        count: response.data.count,
-        next: response.data.next,
-        previous: response.data.previous
-      };
+      console.log('Course API response:', response.data);
+      
+      // Handle both paginated and non-paginated responses
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        items.value = response.data as Course[];
+        pagination.value = {
+          count: response.data.length,
+          next: null,
+          previous: null
+        };
+      } else if (response.data.results) {
+        // Paginated response
+        items.value = response.data.results as Course[];
+        pagination.value = {
+          count: response.data.count || 0,
+          next: response.data.next,
+          previous: response.data.previous
+        };
+      } else {
+        // Unknown format, try to use the data directly
+        console.warn('Unexpected API response format:', response.data);
+        const processedData = Array.isArray(response.data) ? response.data : [response.data];
+        items.value = processedData as Course[];
+        pagination.value = {
+          count: items.value.length,
+          next: null,
+          previous: null
+        };
+      }
+      
       loading.value = false;
     } catch (err: any) {
       loading.value = false;
@@ -88,12 +113,43 @@ export const useCourseStore = defineStore('course', () => {
     error.value = null;
     
     try {
+      console.log('Creating course with data:', courseData);
       const response = await courseService.createCourse(courseData);
       items.value = [response.data, ...items.value];
       loading.value = false;
+      return response.data;
     } catch (err: any) {
+      console.error('Error creating course:', err);
       loading.value = false;
-      error.value = err.response?.data?.detail || 'Failed to create course';
+      
+      // Try to extract detailed error information
+      if (err.response?.data) {
+        console.error('API error response:', err.response.data);
+        
+        // Handle Django REST Framework validation errors
+        if (typeof err.response.data === 'object') {
+          const errorMessages = [];
+          for (const [field, messages] of Object.entries(err.response.data)) {
+            if (Array.isArray(messages)) {
+              errorMessages.push(`${field}: ${messages.join(', ')}`);
+            } else {
+              errorMessages.push(`${field}: ${messages}`);
+            }
+          }
+          
+          if (errorMessages.length > 0) {
+            error.value = errorMessages.join('\n');
+          } else {
+            error.value = JSON.stringify(err.response.data);
+          }
+        } else {
+          error.value = err.response.data.detail || JSON.stringify(err.response.data);
+        }
+      } else {
+        error.value = err.message || 'Failed to create course';
+      }
+      
+      throw err;
     }
   }
   

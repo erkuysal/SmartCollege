@@ -33,18 +33,19 @@ class StudentViewSet(viewsets.ModelViewSet):
         # Use student number as username (lowercase)
         username = student_number.lower()
         
-        # Create the user
-        user = User.objects.create(
+        # Generate institutional email before creating the user
+        domain = getattr(settings, 'INSTITUTION_EMAIL_DOMAIN', 'std.institution.edu')
+        email = f"{username}@{domain}"
+        
+        # Create the user - role will be assigned by signal when Student is created
+        user = User.objects.create_user(
             username=username,
+            email=email,  # Include email when creating the user
+            password=data.get('password', username),  # Use username as default password if not provided
             first_name=first_name,
             last_name=last_name,
             is_active=True
         )
-        
-        # Generate institutional email
-        domain = getattr(settings, 'INSTITUTION_EMAIL_DOMAIN', 'std.institution.edu')
-        user.email = f"{username}@{domain}"
-        user.save(update_fields=['email'])
         
         # Handle faculty_id -> faculty conversion
         faculty = None
@@ -60,7 +61,7 @@ class StudentViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
         
-        # Create the student directly
+        # Create the student directly - this will trigger the signal to set the role
         try:
             student = Student.objects.create(
                 user=user,

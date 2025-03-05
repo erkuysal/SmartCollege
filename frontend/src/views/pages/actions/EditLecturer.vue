@@ -186,9 +186,13 @@ onMounted(async () => {
       formData.value = {
         first_name: lecturer.value.first_name,
         last_name: lecturer.value.last_name,
-        email: lecturer.value.email,
-        position: lecturer.value.position,
-        department: lecturer.value.department,
+        email: lecturer.value.email || '',
+        position: lecturer.value.position || '',
+        department: lecturer.value.department !== null ? 
+          (typeof lecturer.value.department === 'number' ? 
+            String(lecturer.value.department) : 
+            lecturer.value.department) : 
+          '',
         office_location: lecturer.value.office_location || '',
         specialization: lecturer.value.specialization || ''
       };

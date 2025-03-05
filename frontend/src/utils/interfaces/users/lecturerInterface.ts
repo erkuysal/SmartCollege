@@ -44,9 +44,10 @@ export interface Attendance {
 }
 
 export interface Lecturer extends BaseUser {
-  lecturer_id: string;
-  department: string;
-  position: string;
+  lecturer_id?: string;
+  department: string | number | null;
+  faculty?: number;
+  position?: string;
   specialization?: string;
   office_location?: string;
   office_hours?: OfficeHours[];
@@ -55,4 +56,6 @@ export interface Lecturer extends BaseUser {
   attendance_records?: Attendance[];
   teaching_load?: number;
   rfid_card_id?: string;
+  lecturer_code?: string;
+  password?: string;
 } 

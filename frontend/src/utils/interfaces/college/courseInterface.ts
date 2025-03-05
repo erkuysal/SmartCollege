@@ -9,7 +9,7 @@ export interface Course {
   credits: number;
   department: number; // Department ID
   is_active: boolean;
-  lecturer?: number; // Lecturer ID (used in place of teacher in the component)
+  lecturer?: number; // Optional Lecturer ID (can be assigned later)
   prerequisites?: number[]; // Array of course IDs
   created_at: string;
   updated_at: string;

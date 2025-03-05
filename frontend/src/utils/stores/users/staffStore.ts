@@ -51,16 +51,42 @@ export const useStaffStore = defineStore('staff', () => {
       };
       
       const response = await staffService.getStaffMembers(queryParams);
-      items.value = response.data.results;
-      pagination.value = {
-        count: response.data.count,
-        next: response.data.next,
-        previous: response.data.previous
-      };
+      console.log('Staff API response:', response.data);
+      
+      // Handle both paginated and non-paginated responses
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        items.value = response.data as Staff[];
+        pagination.value = {
+          count: response.data.length,
+          next: null,
+          previous: null
+        };
+      } else if (response.data.results) {
+        // Paginated response
+        items.value = response.data.results as Staff[];
+        pagination.value = {
+          count: response.data.count || 0,
+          next: response.data.next,
+          previous: response.data.previous
+        };
+      } else {
+        // Unknown format, try to use the data directly
+        console.warn('Unexpected API response format:', response.data);
+        const processedData = Array.isArray(response.data) ? response.data : [response.data];
+        items.value = processedData as Staff[];
+        pagination.value = {
+          count: items.value.length,
+          next: null,
+          previous: null
+        };
+      }
+      
       loading.value = false;
     } catch (err: any) {
       loading.value = false;
       error.value = err.response?.data?.detail || 'Failed to fetch staff';
+      console.error('Error fetching staff:', err);
     }
   }
   
