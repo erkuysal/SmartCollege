@@ -39,7 +39,21 @@ class AttendanceSessionAdmin(admin.ModelAdmin):
 
 
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'semester', 'academic_year', 'date_enrolled')
+    list_display = ('student', 'get_course', 'get_term', 'get_academic_year', 'date_enrolled')
+    list_filter = ['section__academic_term__term', 'section__academic_term__academic_year', 'status']
+    search_fields = ['student__user__username', 'section__course__code', 'section__course__name']
+    
+    def get_course(self, obj):
+        return obj.section.course
+    get_course.short_description = 'Course'
+    
+    def get_term(self, obj):
+        return obj.section.academic_term.term
+    get_term.short_description = 'Term'
+    
+    def get_academic_year(self, obj):
+        return obj.section.academic_term.academic_year
+    get_academic_year.short_description = 'Academic Year'
 
 
 # class GradeAdmin(admin.ModelAdmin):

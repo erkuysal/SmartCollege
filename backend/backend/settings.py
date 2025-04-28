@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'security.authentication',  # NEW: MFA, password resets, etc.
 
     # --- Utilities ---
+    'utilities',  # Main utilities app
     'utilities.rfid_util',
     'utilities.notifications',  # NEW: SMS, email, push notifications
     'utilities.reports',  # NEW: Generates reports for admins

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Enrollment
+from .models import Enrollment, AcademicTerm
 
 
 class EnrollmentSerializer(serializers.ModelSerializer):
@@ -10,3 +10,10 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enrollment
         fields = '__all__'
+
+
+class AcademicTermSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AcademicTerm
+        fields = ['id', 'name', 'term', 'academic_year', 'start_date', 'end_date', 
+                 'registration_start', 'registration_end', 'is_active']

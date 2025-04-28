@@ -18,3 +18,8 @@ touch academics/attendance/migrations/__init__.py
 touch academics/bindings/migrations/__init__.py
 touch academics/enrollment/migrations/__init__.py
 touch academics/grades/migrations/__init__.py
+
+
+find backend -path "*/migrations/*.py" -not -name "__init__.py" -delete
+
+find backend -path "*/migrations/*.py" | grep -v "__init__.py" | wc -l

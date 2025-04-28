@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAdminUser
@@ -7,19 +7,27 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 
-from academics.enrollment.models import Enrollment
+from academics.enrollment.models import Enrollment, AcademicTerm
 
 from college.courses.models import CoursePackage
 
 from users.students.models import Student
 
-from .serializers import EnrollmentSerializer
+from .serializers import EnrollmentSerializer, AcademicTermSerializer
 
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
     queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
 
+
+class AcademicTermViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for academic terms
+    """
+    queryset = AcademicTerm.objects.all()
+    serializer_class = AcademicTermSerializer
+    
 
 class RefreshSemesterEnrollmentView(GenericAPIView):
     """

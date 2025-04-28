@@ -1,9 +1,9 @@
 from django.db import models
 from django.utils import timezone
+from django.apps import apps
 
 from college.facilities.models import Facility
 from college.departments.models import Department
-from college.schedules.models import Schedule  # Import Schedule model
 
 
 class Classroom(models.Model):
@@ -20,6 +20,9 @@ class Classroom(models.Model):
 
     def is_in_use(self):
         """Check if the classroom is currently in use based on the schedule."""
+        # Lazy import to prevent circular dependency
+        Schedule = apps.get_model('schedules', 'Schedule')
+        
         now = timezone.now()
         current_time = now.time()
         current_day = now.weekday()  # 0 is Monday, 6 is Sunday
