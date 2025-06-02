@@ -4,8 +4,10 @@ import type { ListStoreState, FilterState } from '../base/types';
 import type { 
   Course, 
   CourseSchedule, 
-  CourseEnrollment 
+  CourseEnrollment,
+  PopulatedCourseEnrollment
 } from '../../interfaces/college/courseInterface';
+import type { Student } from '../../interfaces/users/studentInterface';
 import courseService from '../../services/college/courseService';
 
 // Initial filters
@@ -32,7 +34,7 @@ export const useCourseStore = defineStore('course', () => {
   
   // Additional state
   const schedules = ref<CourseSchedule[]>([]);
-  const enrollments = ref<CourseEnrollment[]>([]);
+  const enrollments = ref<(CourseEnrollment | PopulatedCourseEnrollment)[]>([]);
   const filters = ref<FilterState>({ ...initialFilters });
 
   // Getters
@@ -193,7 +195,45 @@ export const useCourseStore = defineStore('course', () => {
     
     try {
       const response = await courseService.getCourseSchedule(courseId);
-      schedules.value = response.data.results;
+      console.log('Raw schedule API response:', response.data);
+      
+      // Handle both legacy and new response formats
+      if (Array.isArray(response.data)) {
+        schedules.value = response.data;
+      } else if (response.data.results && Array.isArray(response.data.results)) {
+        schedules.value = response.data.results;
+      } else {
+        console.warn('Unexpected schedule response format', response.data);
+        schedules.value = [];
+      }
+      
+      // Ensure day_of_week is defined for each schedule
+      schedules.value = schedules.value.map((schedule: any) => {
+        if (!('day_of_week' in schedule) && 'time_slot' in schedule) {
+          // Try to extract day from time_slot_display
+          const timeSlotDisplay = schedule.time_slot_display || '';
+          const dayMatch = timeSlotDisplay.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
+          
+          if (dayMatch) {
+            const day = dayMatch[0].toLowerCase();
+            let dayNumber = 0;
+            
+            switch (day) {
+              case 'monday': dayNumber = 1; break;
+              case 'tuesday': dayNumber = 2; break;
+              case 'wednesday': dayNumber = 3; break;
+              case 'thursday': dayNumber = 4; break;
+              case 'friday': dayNumber = 5; break;
+              case 'saturday': dayNumber = 6; break;
+              case 'sunday': dayNumber = 0; break;
+            }
+            
+            return { ...schedule, day_of_week: dayNumber };
+          }
+        }
+        return schedule;
+      });
+      
       loading.value = false;
     } catch (err: any) {
       loading.value = false;
@@ -221,7 +261,56 @@ export const useCourseStore = defineStore('course', () => {
     
     try {
       const response = await courseService.getCourseEnrollments(courseId);
-      enrollments.value = response.data.results;
+      console.log('Raw enrollment API response:', response.data);
+      
+      // Handle various response formats
+      if (Array.isArray(response.data)) {
+        enrollments.value = response.data;
+      } else if (response.data.results && Array.isArray(response.data.results)) {
+        enrollments.value = response.data.results;
+      } else {
+        console.warn('Unexpected enrollment response format', response.data);
+        enrollments.value = [];
+      }
+      
+      // If student is just an ID, try to fetch full student data
+      const needsStudentDetails = enrollments.value.some(
+        enrollment => enrollment.student && typeof enrollment.student === 'number'
+      );
+      
+      if (needsStudentDetails) {
+        console.log('Fetching detailed student information for enrollments');
+        try {
+          // Fetch detailed student information for each enrollment
+          const detailedEnrollments = await Promise.all(
+            enrollments.value.map(async (enrollment) => {
+              if (enrollment.student && typeof enrollment.student === 'number') {
+                try {
+                  // Use the student service to get student details
+                  const studentResponse = await courseService.getStudentById(enrollment.student);
+                  console.log('Got student data:', studentResponse.data);
+                  return {
+                    ...enrollment,
+                    student: studentResponse.data,
+                    // Store the student ID separate from the student object
+                    studentId: enrollment.student
+                  };
+                } catch (err) {
+                  console.error(`Failed to fetch details for student ID ${enrollment.student}`, err);
+                  return enrollment;
+                }
+              }
+              return enrollment;
+            })
+          );
+          
+          // Safely assign to enrollment value with type casting
+          enrollments.value = detailedEnrollments as (CourseEnrollment | PopulatedCourseEnrollment)[];
+        } catch (err) {
+          console.error('Error fetching detailed student information:', err);
+        }
+      }
+      
       loading.value = false;
     } catch (err: any) {
       loading.value = false;

@@ -3,6 +3,8 @@ import { ref, computed } from 'vue';
 import type { ListStoreState, FilterState } from '../base/types';
 import type { Faculty } from '../../interfaces/college/facultyInterface';
 import facultyService from '../../services/college/facultyService';
+import { facilityService } from '@/utils/services/college/facilityService';
+import type { Facility } from '@/utils/services/college/facilityService';
 
 // Initial filters
 const initialFilters: FilterState = {
@@ -170,5 +172,44 @@ export const useFacultyStore = defineStore('faculty', () => {
     resetFilters,
     clearError,
     resetState
+  };
+});
+
+export const useFacilityStore = defineStore('facility', () => {
+  const items = ref<Facility[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+
+  async function fetchFacilities() {
+    loading.value = true;
+    error.value = null;
+    try {
+      items.value = await facilityService.getAllFacilities();
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function createFacility(facilityData: Omit<Facility, 'id' | 'created_at' | 'updated_at'>) {
+    loading.value = true;
+    error.value = null;
+    try {
+      await facilityService.createFacility(facilityData);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    items,
+    loading,
+    error,
+    fetchFacilities,
+    createFacility
   };
 }); 

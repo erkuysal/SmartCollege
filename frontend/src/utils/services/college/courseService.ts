@@ -1,7 +1,9 @@
 import { BaseService, type QueryParams } from '../baseService';
 import { API_ROUTES } from '../../config/apiRoutes';
 import type { Course, CourseSchedule, CourseEnrollment, PopulatedCourse } from '../../interfaces/college/courseInterface';
+import type { Student } from '../../interfaces/users/studentInterface';
 import type { PaginatedResponse } from '../baseService';
+import axios from 'axios';
 
 export class CourseService extends BaseService {
   constructor() {
@@ -54,16 +56,14 @@ export class CourseService extends BaseService {
    * Get schedule for a course
    */
   async getCourseSchedule(courseId: number) {
-    const url = API_ROUTES.COURSE_SCHEDULE.replace('{id}', courseId.toString());
-    return this.get<PaginatedResponse<CourseSchedule>>(url);
+    return this.get<PaginatedResponse<CourseSchedule>>(`${courseId}/schedule`);
   }
 
   /**
    * Update schedule for a course
    */
   async updateCourseSchedule(courseId: number, scheduleData: Partial<CourseSchedule>[]) {
-    const url = API_ROUTES.COURSE_SCHEDULE.replace('{id}', courseId.toString());
-    return this.patch<CourseSchedule[]>(url, scheduleData);
+    return this.patch<CourseSchedule[]>(`${courseId}/schedule`, scheduleData);
   }
 
   /**
@@ -109,6 +109,14 @@ export class CourseService extends BaseService {
       is_active: true,
       semester: semester || 'current'
     });
+  }
+
+  /**
+   * Get student details by ID
+   */
+  async getStudentById(id: number) {
+    // Use the student endpoint directly
+    return axios.get<Student>(`${API_ROUTES.STUDENTS_ROUTE}/${id}/`);
   }
 }
 

@@ -2,13 +2,21 @@ export interface Classroom {
   id: number;
   name: string;
   building: string;
-  room_number: string;
+  room_number?: string;
   capacity: number;
   has_projector: boolean;
-  has_computers: boolean;
-  is_lab: boolean;
+  has_whiteboard: boolean;
   is_active: boolean;
+  is_in_use: boolean;
   notes?: string;
+  
+  // Additional fields from actual API response
+  department: number;
+  department_name: string;
+  facility: number;
+  facility_name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ClassroomSchedule {

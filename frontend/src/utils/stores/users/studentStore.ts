@@ -8,6 +8,7 @@ import type {
   StudentGrade
 } from '../../interfaces/users/studentInterface';
 import studentService from '../../services/users/studentService';
+import { rfidService } from '../../services/utilities/RFIDService';
 import type { RFIDCard } from '../../interfaces/utilities/RFIDInterface';
 
 // Initial filters
@@ -107,7 +108,12 @@ export const useStudentStore = defineStore('student', () => {
     
     try {
       const response = await studentService.getStudentById(id);
-      selectedItem.value = response.data;
+      selectedItem.value = {
+        ...response.data,
+        courses: response.data.courses ?? [],
+        attendance_records: response.data.attendance_records ?? [],
+        grades: response.data.grades ?? []
+      };
       loading.value = false;
     } catch (err: any) {
       loading.value = false;
@@ -142,9 +148,61 @@ export const useStudentStore = defineStore('student', () => {
         selectedItem.value = { ...selectedItem.value, ...response.data };
       }
       loading.value = false;
+      return response.data;
     } catch (err: any) {
       loading.value = false;
       error.value = err.response?.data?.detail || `Failed to update student with ID ${id}`;
+      throw err;
+    }
+  }
+  
+  /**
+   * Safe update student method that ensures critical fields like student_number cannot be changed
+   */
+  async function safeUpdateStudent(id: number, studentData: Partial<Student>) {
+    loading.value = true;
+    error.value = null;
+    
+    try {
+      // Get the current student data from the store or fetch it if not available
+      let originalStudent = items.value.find(student => student.id === id);
+      
+      if (!originalStudent) {
+        // If not in the store, fetch it from the API
+        const response = await studentService.getStudentById(id);
+        originalStudent = response.data;
+      }
+      
+      // Safety check: prevent student_number from being changed
+      if (studentData.student_number && originalStudent && 
+          studentData.student_number !== originalStudent.student_number) {
+        console.error('Attempt to change student number detected and prevented');
+        error.value = 'Student number cannot be modified';
+        loading.value = false;
+        return null;
+      }
+      
+      // Safe to update now - exclude student_number from the update
+      const { student_number, ...safeData } = studentData;
+      
+      const response = await studentService.updateStudent(id, safeData);
+      
+      // Update the items in the store
+      items.value = items.value.map(student => 
+        student.id === id ? { ...student, ...response.data } : student
+      );
+      
+      // Update selectedItem if it's the same student
+      if (selectedItem.value && selectedItem.value.id === id) {
+        selectedItem.value = { ...selectedItem.value, ...response.data };
+      }
+      
+      loading.value = false;
+      return response.data;
+    } catch (err: any) {
+      loading.value = false;
+      error.value = err.response?.data?.detail || `Failed to update student with ID ${id}`;
+      throw err;
     }
   }
   
@@ -176,20 +234,6 @@ export const useStudentStore = defineStore('student', () => {
     } catch (err: any) {
       loading.value = false;
       error.value = err.response?.data?.detail || `Failed to fetch courses for student with ID ${studentId}`;
-    }
-  }
-  
-  async function enrollStudentInCourse(studentId: number, courseId: number) {
-    loading.value = true;
-    error.value = null;
-    
-    try {
-      const response = await studentService.enrollStudentInCourse(studentId, courseId);
-      courses.value = [...courses.value, response.data];
-      loading.value = false;
-    } catch (err: any) {
-      loading.value = false;
-      error.value = err.response?.data?.detail || `Failed to enroll student in course`;
     }
   }
   
@@ -288,16 +332,24 @@ export const useStudentStore = defineStore('student', () => {
     error.value = null;
     
     try {
-      // This is a placeholder since the actual method doesn't exist in the service
-      // You'll need to implement this method in the studentService
-      // const response = await studentService.readRFIDCard(cardId);
-      // For now, we'll just return a mock response
+      const response = await rfidService.readRFID();
+      if (response.data && response.data.user_code) {
+        rfidCard.value = response.data.rfid;
+        loading.value = false;
+        return { 
+          success: true, 
+          cardId,
+          userCode: response.data.user_code,
+          userType: response.data.user_type,
+          user: response.data.user
+        };
+      }
       loading.value = false;
-      return { success: true, cardId };
+      return { success: false, error: 'Invalid card data' };
     } catch (err: any) {
       loading.value = false;
       error.value = err.response?.data?.detail || `Failed to read RFID card`;
-      return null;
+      return { success: false, error: error.value };
     }
   }
   
@@ -351,9 +403,9 @@ export const useStudentStore = defineStore('student', () => {
     fetchStudentById,
     createStudent,
     updateStudent,
+    safeUpdateStudent,
     deleteStudent,
     fetchStudentCourses,
-    enrollStudentInCourse,
     dropCourse,
     fetchStudentAttendance,
     fetchStudentGrades,

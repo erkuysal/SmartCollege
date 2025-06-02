@@ -1,6 +1,13 @@
 import axios, { AxiosError } from "axios";
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { API_ROUTES } from "./config/apiRoutes";
+import { API_CONFIG, AUTH_CONFIG, FEATURES } from "./config/environment";
+import requestCache from "./cache/requestCache";
+import logger from "./logging/logger";
+import { retry } from "./helpers/requestControl";
+
+// Create a module-specific logger
+const apiLogger = logger.createLogger('API');
 
 // Types for tokens
 interface TokenPair {
@@ -8,25 +15,26 @@ interface TokenPair {
   refresh: string;
 }
 
-// Storage keys
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
-
 class ApiClient {
   private client: AxiosInstance;
   private isRefreshing = false;
   private refreshSubscribers: Array<(token: string) => void> = [];
 
   constructor() {
-    // Use only the domain without any path prefix
-    const baseURL = 'http://127.0.0.1:8000';
-    console.log('API Client initialized with baseURL:', baseURL);
+    // Get base URL from environment config
+    const baseURL = API_CONFIG.BASE_URL;
+    
+    // Only log in debug mode
+    if (FEATURES.DEBUG_MODE) {
+      apiLogger.info('API Client initialized with baseURL:', { baseURL });
+    }
     
     this.client = axios.create({
-      baseURL, // base URL without /api prefix
+      baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: API_CONFIG.TIMEOUT, // Add timeout from config
     });
 
     this.setupInterceptors();
@@ -36,14 +44,22 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+        const token = localStorage.getItem(AUTH_CONFIG.TOKEN_STORAGE_KEY);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        console.log(`Request to: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+        
+        // Only log in debug mode
+        if (FEATURES.DEBUG_MODE) {
+          apiLogger.debug(`Request: ${config.method?.toUpperCase()} ${config.url}`);
+        }
+        
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        apiLogger.error('Request error', { error });
+        return Promise.reject(error);
+      }
     );
 
     // Response interceptor to handle token refresh
@@ -51,6 +67,27 @@ class ApiClient {
       (response) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+        
+        // Handle 500 Internal Server Error specifically
+        if (error.response?.status === 500) {
+          apiLogger.error('Server Error (500)', {
+            url: originalRequest.url,
+            method: originalRequest.method,
+            data: error.response?.data
+          });
+          
+          // Check if this endpoint should use fallbacks
+          if (this.shouldUseFallbackForEndpoint(originalRequest.url || '')) {
+            apiLogger.warn(`Using fallback for 500 error on ${originalRequest.url}`);
+            
+            // Create a custom error with a flag for fallback
+            const fallbackError = new Error(`Server error with fallback: ${error.message}`);
+            // @ts-ignore - Add custom property to error object
+            fallbackError._useFallback = true;
+            
+            return Promise.reject(fallbackError);
+          }
+        }
         
         // If error is 401 and not already retrying
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -77,7 +114,7 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+            const refreshToken = localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_STORAGE_KEY);
             if (!refreshToken) {
               // No refresh token, logout user
               this.clearTokens();
@@ -103,6 +140,7 @@ class ApiClient {
             return this.client(originalRequest);
           } catch (refreshError) {
             // Refresh failed, logout user
+            apiLogger.warn('Token refresh failed, logging out user');
             this.clearTokens();
             return Promise.reject(refreshError);
           } finally {
@@ -110,15 +148,14 @@ class ApiClient {
           }
         }
 
-        // Log error details for debugging
-        console.error('API Error:', {
+        // Handle other errors
+        apiLogger.error('API Error', {
           status: error.response?.status,
           url: originalRequest.url,
           method: originalRequest.method,
           data: error.response?.data
         });
 
-        // Handle other errors
         return Promise.reject(error);
       }
     );
@@ -131,21 +168,21 @@ class ApiClient {
 
   // Store tokens in localStorage
   public setTokens(tokens: TokenPair): void {
-    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access);
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
+    localStorage.setItem(AUTH_CONFIG.TOKEN_STORAGE_KEY, tokens.access);
+    localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_STORAGE_KEY, tokens.refresh);
   }
 
   // Clear tokens from localStorage
   public clearTokens(): void {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_CONFIG.TOKEN_STORAGE_KEY);
+    localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_STORAGE_KEY);
     // Dispatch logout event for stores to listen to
-    window.dispatchEvent(new Event('auth:logout'));
+    window.dispatchEvent(new Event(AUTH_CONFIG.LOGOUT_EVENT));
   }
 
   // Check if user is authenticated
   public isAuthenticated(): boolean {
-    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
+    return !!localStorage.getItem(AUTH_CONFIG.TOKEN_STORAGE_KEY);
   }
 
   // Generic request method
@@ -153,42 +190,89 @@ class ApiClient {
     return this.client.request<T>(config);
   }
 
-  // Convenience methods for different HTTP verbs
+  // Convenience methods for different HTTP verbs with caching for GET requests
   public async get<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    // Ensure URL doesn't have double slashes
-    const cleanUrl = url.replace(/([^:]\/)\/+/g, "$1");
-    // Remove duplicate API prefixes if present
-    const finalUrl = this.removeDuplicateApiPrefix(cleanUrl);
-    console.log('GET request to:', finalUrl);
-    return this.client.get<T>(finalUrl, config);
+    // Process URL
+    const finalUrl = this.processUrl(url);
+    
+    // Try to get from cache first (only for GET requests)
+    if (FEATURES.ENABLE_API_CACHE) {
+      const cacheKey = requestCache.generateKey(finalUrl, config?.params);
+      const cachedResponse = requestCache.get<AxiosResponse<T>>(cacheKey);
+      
+      if (cachedResponse) {
+        if (FEATURES.DEBUG_MODE) {
+          apiLogger.debug(`Cache hit for GET ${finalUrl}`);
+        }
+        return cachedResponse;
+      }
+    }
+    
+    // Make actual request with retry capability
+    const makeRequest = () => this.client.get<T>(finalUrl, config);
+    
+    try {
+      const response = await retry(makeRequest, {
+        maxAttempts: API_CONFIG.MAX_RETRIES,
+        delay: API_CONFIG.RETRY_DELAY,
+        onRetry: (attempt, error) => {
+          apiLogger.warn(`Retry attempt ${attempt} for GET ${finalUrl}`, { error });
+        }
+      });
+      
+      // Cache successful GET responses
+      if (FEATURES.ENABLE_API_CACHE) {
+        const cacheKey = requestCache.generateKey(finalUrl, config?.params);
+        requestCache.set(cacheKey, response);
+      }
+      
+      return response;
+    } catch (error) {
+      apiLogger.error(`Failed GET request to ${finalUrl} after retries`, { error });
+      throw error;
+    }
   }
 
   public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    const cleanUrl = url.replace(/([^:]\/)\/+/g, "$1");
-    const finalUrl = this.removeDuplicateApiPrefix(cleanUrl);
-    console.log('POST request to:', finalUrl);
+    const finalUrl = this.processUrl(url);
     return this.client.post<T>(finalUrl, data, config);
   }
 
   public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    const cleanUrl = url.replace(/([^:]\/)\/+/g, "$1");
-    const finalUrl = this.removeDuplicateApiPrefix(cleanUrl);
-    console.log('PUT request to:', finalUrl);
+    const finalUrl = this.processUrl(url);
+    // Invalidate relevant caches on data modification
+    this.invalidateRelatedCaches(finalUrl);
     return this.client.put<T>(finalUrl, data, config);
   }
 
   public async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    const cleanUrl = url.replace(/([^:]\/)\/+/g, "$1");
-    const finalUrl = this.removeDuplicateApiPrefix(cleanUrl);
-    console.log('PATCH request to:', finalUrl);
+    const finalUrl = this.processUrl(url);
+    // Invalidate relevant caches on data modification
+    this.invalidateRelatedCaches(finalUrl);
     return this.client.patch<T>(finalUrl, data, config);
   }
 
   public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    const cleanUrl = url.replace(/([^:]\/)\/+/g, "$1");
-    const finalUrl = this.removeDuplicateApiPrefix(cleanUrl);
-    console.log('DELETE request to:', finalUrl);
+    const finalUrl = this.processUrl(url);
+    // Invalidate relevant caches on data deletion
+    this.invalidateRelatedCaches(finalUrl);
     return this.client.delete<T>(finalUrl, config);
+  }
+
+  // Helper method to clean up and process URLs
+  private processUrl(url: string): string {
+    // Ensure URL doesn't have double slashes
+    let processedUrl = url.replace(/([^:]\/)\/+/g, "$1");
+    
+    // Remove duplicate API prefixes if present
+    processedUrl = this.removeDuplicateApiPrefix(processedUrl);
+    
+    // Ensure URL ends with a trailing slash for Django's APPEND_SLASH setting
+    if (!processedUrl.endsWith('/') && !processedUrl.includes('?')) {
+      processedUrl = `${processedUrl}/`;
+    }
+    
+    return processedUrl;
   }
 
   // Helper method to remove duplicate API prefixes
@@ -200,12 +284,35 @@ class ApiClient {
       return url.replace(apiPattern, '/api/$1/');
     }
     
-    // Ensure URL ends with a trailing slash for Django's APPEND_SLASH setting
-    if (!url.endsWith('/')) {
-      return url + '/';
+    return url;
+  }
+  
+  // Invalidate caches related to a URL
+  private invalidateRelatedCaches(url: string): void {
+    if (!FEATURES.ENABLE_API_CACHE) return;
+    
+    // Extract the base resource path from the URL
+    // Example: /api/users/123/ -> /api/users
+    const pathParts = url.split('/').filter(Boolean);
+    if (pathParts.length >= 2) {
+      const resourcePath = `/${pathParts[0]}/${pathParts[1]}`;
+      requestCache.clear(resourcePath);
+      
+      if (FEATURES.DEBUG_MODE) {
+        apiLogger.debug(`Invalidated cache for resource: ${resourcePath}`);
+      }
+    }
+  }
+
+  // Helper method to check if an endpoint should use fallback data
+  private shouldUseFallbackForEndpoint(url: string): boolean {
+    if (!API_CONFIG.ERROR_HANDLING.ENABLE_FALLBACKS) {
+      return false;
     }
     
-    return url;
+    return API_CONFIG.FALLBACK_ENABLED_ENDPOINTS.some(endpoint => 
+      url.includes(endpoint)
+    );
   }
 }
 

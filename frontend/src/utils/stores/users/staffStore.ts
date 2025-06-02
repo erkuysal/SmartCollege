@@ -4,7 +4,7 @@ import type { ListStoreState, FilterState } from '../base/types';
 import type { Staff } from '../../interfaces/users/staffInterface';
 import type { RFIDCard } from '../../interfaces/utilities/RFIDInterface';
 import staffService from '../../services/users/staffService';
-import rfidService from '../../services/utilities/RFIDService';
+import { rfidService } from '../../services/utilities/RFIDService';
 
 // Initial filters
 const initialFilters: FilterState = {
@@ -157,19 +157,23 @@ export const useStaffStore = defineStore('staff', () => {
     error.value = null;
     
     try {
-      // This is a placeholder - we need to implement the actual RFID reading functionality
-      // This might involve a different service call or hardware integration
-      // For now, we'll simulate it by creating a new RFID card
-      const dummyCard: Partial<RFIDCard> = {
-        card_id: `RFID-${Date.now()}`,
-        is_active: true
-      };
-      const response = await rfidService.createRFIDCard(dummyCard);
-      rfidCard.value = response.data;
+      const response = await rfidService.readRFID();
+      if (response.data && response.data.user_code) {
+        rfidCard.value = response.data.rfid;
+        loading.value = false;
+        return { 
+          success: true, 
+          userCode: response.data.user_code,
+          userType: response.data.user_type,
+          user: response.data.user
+        };
+      }
       loading.value = false;
+      return { success: false, error: 'Invalid card data' };
     } catch (err: any) {
       loading.value = false;
       error.value = err.response?.data?.detail || 'Failed to read RFID card';
+      return { success: false, error: error.value };
     }
   }
   

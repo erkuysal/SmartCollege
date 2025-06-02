@@ -4,55 +4,74 @@ import type {
   RFIDCard, 
   RFIDAccessLog, 
   RFIDAccessVerification, 
-  RFIDAccessResponse 
+  RFIDAccessResponse,
+  RFIDResponse,
+  WriteRFIDResponse
 } from '../../interfaces/utilities/RFIDInterface';
 import type { PaginatedResponse } from '../baseService';
 
 export class RFIDService extends BaseService {
-  constructor() {
+  private static instance: RFIDService;
+
+  private constructor() {
     super(API_ROUTES.UTILITIES_BASE_URL);
+  }
+
+  public static getInstance(): RFIDService {
+    if (!RFIDService.instance) {
+      RFIDService.instance = new RFIDService();
+    }
+    return RFIDService.instance;
+  }
+
+  /**
+   * Read an RFID card
+   */
+  async readRFID() {
+    return this.get<RFIDResponse>('/read/');
+  }
+
+  /**
+   * Write to an RFID card
+   */
+  async writeRFID(userId: number, staffId?: number) {
+    const data = staffId ? { user_id: userId, staff_id: staffId } : { user_id: userId };
+    return this.post<WriteRFIDResponse>('/write/', data);
   }
 
   /**
    * Get a list of RFID cards with optional filtering
    */
   async getRFIDCards(params?: QueryParams) {
-    return this.getList<RFIDCard>(API_ROUTES.RFID_CARDS, params);
+    return this.getList<RFIDCard>('/cards/', params);
   }
 
   /**
    * Get an RFID card by ID
    */
   async getRFIDCardById(id: number) {
-    return this.getById<RFIDCard>(id, API_ROUTES.RFID_CARDS);
+    return this.getById<RFIDCard>(id, '/cards/');
   }
 
   /**
    * Create a new RFID card
    */
   async createRFIDCard(cardData: Partial<RFIDCard>) {
-    return this.create<RFIDCard>(cardData, API_ROUTES.RFID_CARDS);
+    return this.create<RFIDCard>(cardData, '/cards/');
   }
 
   /**
    * Update an RFID card
    */
   async updateRFIDCard(id: number, cardData: Partial<RFIDCard>) {
-    return this.patch<RFIDCard>(id, cardData, API_ROUTES.RFID_CARDS);
+    return this.patch<RFIDCard>(id, cardData, '/cards/');
   }
 
   /**
    * Delete an RFID card
    */
   async deleteRFIDCard(id: number) {
-    return this.delete<RFIDCard>(id, API_ROUTES.RFID_CARDS);
-  }
-
-  /**
-   * Verify access for an RFID card
-   */
-  async verifyAccess(verificationData: RFIDAccessVerification) {
-    return this.post<RFIDAccessResponse>(API_ROUTES.RFID_ACCESS.VERIFY, verificationData);
+    return this.delete<RFIDCard>(id, '/cards/');
   }
 
   /**
@@ -91,8 +110,36 @@ export class RFIDService extends BaseService {
       params
     );
   }
+
+  // Auto-assign new RFID (POST)
+  async assignRFID(data: { user_id: number }) {
+    return this.post('/assign/', data);
+  }
+
+  // List staff who can write RFID (GET)
+  async getStaffList() {
+    return this.get('/staff/');
+  }
+
+  // Card status and personnel assignment
+  async assignToPersonnel(cardId: number, staffId: number) {
+    return this.post(`/cards/${cardId}/assign_to_personnel/`, { staff_id: staffId });
+  }
+
+  async updateCardStatus(cardId: number, newStatus: string, notes?: string) {
+    const data = notes ? { new_status: newStatus, notes } : { new_status: newStatus };
+    return this.post(`/cards/${cardId}/update_status/`, data);
+  }
+
+  // Assigned and pending cards
+  async getAssignedCards() {
+    return this.get<RFIDCard[]>('/cards/assigned/');
+  }
+
+  async getPendingCards() {
+    return this.get<RFIDCard[]>('/cards/pending/');
+  }
 }
 
 // Create and export a singleton instance
-const rfidService = new RFIDService();
-export default rfidService;
+export const rfidService = RFIDService.getInstance();

@@ -1,58 +1,94 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { ScheduleService } from '@/utils/services/college/scheduleService';
-import type { Schedule, PopulatedSchedule } from '@/utils/interfaces/college/scheduleInterface';
+import scheduleService from '@/utils/services/college/scheduleService';
+import type { Schedule, LegacySchedule, ScheduleFilter } from '@/utils/interfaces/college/scheduleInterface';
+import type { PaginatedResponse } from '@/utils/services/baseService';
+import logger from '@/utils/logging/logger';
+
+// Create a logger for the schedule store
+const storeLogger = logger.createLogger('ScheduleStore');
+
+// Extended response type with fallback indicator
+interface ScheduleResponseWithFallback extends PaginatedResponse<Schedule> {
+  _useFallback?: boolean;
+}
 
 export const useScheduleStore = defineStore('schedule', () => {
   // State
-  const schedules = ref<PopulatedSchedule[]>([]);
-  const currentSchedule = ref<PopulatedSchedule | null>(null);
+  const schedules = ref<Schedule[]>([]);
+  const currentSchedule = ref<Schedule | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const params = ref({
     id: null as number | null,
     classroom: null as number | null,
-    course: null as number | null,
+    section: null as number | null,
+    time_slot: null as number | null,
   });
+  const usesFallbackData = ref(false);
 
   // Getters
   const getScheduleById = (id: number) => 
     schedules.value.find(schedule => schedule.id === id);
   
   const getSchedulesByClassroom = (classroomId: number) =>
-    schedules.value.filter(schedule => schedule.classroom.id === classroomId);
+    schedules.value.filter(schedule => schedule.classroom === classroomId);
   
-  const getSchedulesByCourse = (courseId: number) =>
-    schedules.value.filter(schedule => schedule.course.id === courseId);
+  const getSchedulesBySection = (sectionId: number) =>
+    schedules.value.filter(schedule => schedule.section === sectionId);
 
   // Actions
-  async function fetchSchedules(fetchParams?: { id?: number; classroom?: number; course?: number }) {
+  async function fetchSchedules(fetchParams?: { id?: number; classroom?: number; section?: number; time_slot?: number }) {
     if (loading.value || 
         (fetchParams?.id && params.value.id === fetchParams.id) ||
         (fetchParams?.classroom && params.value.classroom === fetchParams.classroom) ||
-        (fetchParams?.course && params.value.course === fetchParams.course)) return;
+        (fetchParams?.section && params.value.section === fetchParams.section) ||
+        (fetchParams?.time_slot && params.value.time_slot === fetchParams.time_slot)) return;
     
     loading.value = true;
+    error.value = null;
+    usesFallbackData.value = false;
+    
     try {
       if (fetchParams?.id) {
-        const schedule = await ScheduleService.fetchSchedule(fetchParams.id);
-        currentSchedule.value = schedule;
+        storeLogger.debug('Fetching schedule by ID', { id: fetchParams.id });
+        const schedule = await scheduleService.fetchSchedule(fetchParams.id);
+        currentSchedule.value = schedule as Schedule;
         params.value.id = fetchParams.id;
       } else {
-        const fetchedSchedules = await ScheduleService.fetchSchedules({
-          classroom: fetchParams?.classroom,
-          course: fetchParams?.course,
-        });
-        schedules.value = fetchedSchedules;
-        params.value = {
-          id: null,
-          classroom: fetchParams?.classroom ?? null,
-          course: fetchParams?.course ?? null,
-        };
+        const filterParams: ScheduleFilter = {};
+        if (fetchParams?.classroom) filterParams.classroom = fetchParams.classroom;
+        if (fetchParams?.section) filterParams.section = fetchParams.section;
+        if (fetchParams?.time_slot) filterParams.time_slot = fetchParams.time_slot;
+        
+        storeLogger.debug('Fetching schedules with filters', { filterParams });
+        const response = await scheduleService.fetchSchedules(filterParams) as ScheduleResponseWithFallback;
+        
+        if (response) {
+          schedules.value = response.results as Schedule[];
+          
+          // If the response is from fallback data, set the flag
+          if (response._useFallback) {
+            usesFallbackData.value = true;
+            storeLogger.info('Using fallback schedule data');
+          }
+          
+          params.value = {
+            id: null,
+            classroom: fetchParams?.classroom ?? null,
+            section: fetchParams?.section ?? null,
+            time_slot: fetchParams?.time_slot ?? null
+          };
+        }
       }
     } catch (err) {
+      storeLogger.error('Error fetching schedules', { error: err });
       error.value = err instanceof Error ? err.message : String(err);
-      throw err;
+      
+      // If we have no schedules, set empty array to prevent UI issues
+      if (schedules.value.length === 0) {
+        schedules.value = [];
+      }
     } finally {
       loading.value = false;
     }
@@ -60,13 +96,18 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   async function createSchedule(data: Partial<Schedule>) {
     loading.value = true;
+    error.value = null;
+    
     try {
-      const newSchedule = await ScheduleService.createSchedule(data);
+      storeLogger.debug('Creating new schedule', { data });
+      const newSchedule = await scheduleService.createSchedule(data);
+      
       // Fetch the populated version of the schedule
-      const populatedSchedule = await ScheduleService.fetchSchedule(newSchedule.id);
-      schedules.value.push(populatedSchedule);
-      return populatedSchedule;
+      const fullSchedule = await scheduleService.fetchSchedule(newSchedule.id);
+      schedules.value.push(fullSchedule);
+      return fullSchedule;
     } catch (err) {
+      storeLogger.error('Error creating schedule', { error: err, data });
       error.value = err instanceof Error ? err.message : String(err);
       throw err;
     } finally {
@@ -76,10 +117,14 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   async function updateSchedule(id: number, data: Partial<Schedule>) {
     loading.value = true;
+    error.value = null;
+    
     try {
-      await ScheduleService.updateSchedule(id, data);
+      storeLogger.debug('Updating schedule', { id, data });
+      await scheduleService.updateSchedule(id, data);
+      
       // Fetch the updated populated version
-      const updated = await ScheduleService.fetchSchedule(id);
+      const updated = await scheduleService.fetchSchedule(id);
       const index = schedules.value.findIndex(s => s.id === id);
       if (index !== -1) {
         schedules.value[index] = updated;
@@ -89,6 +134,7 @@ export const useScheduleStore = defineStore('schedule', () => {
       }
       return updated;
     } catch (err) {
+      storeLogger.error('Error updating schedule', { error: err, id, data });
       error.value = err instanceof Error ? err.message : String(err);
       throw err;
     } finally {
@@ -98,13 +144,17 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   async function deleteSchedule(id: number) {
     loading.value = true;
+    error.value = null;
+    
     try {
-      await ScheduleService.deleteSchedule(id);
+      storeLogger.debug('Deleting schedule', { id });
+      await scheduleService.deleteSchedule(id);
       schedules.value = schedules.value.filter(s => s.id !== id);
       if (currentSchedule.value?.id === id) {
         currentSchedule.value = null;
       }
     } catch (err) {
+      storeLogger.error('Error deleting schedule', { error: err, id });
       error.value = err instanceof Error ? err.message : String(err);
       throw err;
     } finally {
@@ -117,10 +167,12 @@ export const useScheduleStore = defineStore('schedule', () => {
     currentSchedule.value = null;
     loading.value = false;
     error.value = null;
+    usesFallbackData.value = false;
     params.value = {
       id: null,
       classroom: null,
-      course: null,
+      section: null,
+      time_slot: null
     };
   }
 
@@ -131,11 +183,12 @@ export const useScheduleStore = defineStore('schedule', () => {
     loading,
     error,
     params,
+    usesFallbackData,
     
     // Getters
     getScheduleById,
     getSchedulesByClassroom,
-    getSchedulesByCourse,
+    getSchedulesBySection,
     
     // Actions
     fetchSchedules,

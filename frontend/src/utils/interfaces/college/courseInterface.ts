@@ -8,6 +8,7 @@ export interface Course {
   description: string;
   credits: number;
   department: number; // Department ID
+  department_name?: string; // Optional department name for display
   is_active: boolean;
   lecturer?: number; // Optional Lecturer ID (can be assigned later)
   prerequisites?: number[]; // Array of course IDs
@@ -34,6 +35,21 @@ export interface CourseEnrollment {
   status: 'active' | 'completed' | 'dropped';
   grade?: string;
   semester: string;
+  date_enrolled?: string; // Alternative field name in some API responses
+  student_name?: string; // Some APIs include this field
+}
+
+export interface PopulatedCourseEnrollment {
+  id: number;
+  course: number | Course;
+  student: Student;
+  studentId?: number; // We store the original ID here
+  enrollment_date: string;
+  date_enrolled?: string; // Alternative field name in some API responses
+  status: 'active' | 'completed' | 'dropped';
+  grade?: string;
+  semester: string;
+  student_name?: string; // Some APIs include this field
 }
 
 export interface PopulatedCourse extends Omit<Course, 'department' | 'prerequisites' | 'lecturer'> {
@@ -42,6 +58,7 @@ export interface PopulatedCourse extends Omit<Course, 'department' | 'prerequisi
     name: string;
     code: string;
   };
+  department_name?: string; // Optional department name for display
   prerequisites?: {
     id: number;
     code: string;
@@ -55,9 +72,4 @@ export interface PopulatedCourse extends Omit<Course, 'department' | 'prerequisi
   lecturers?: Lecturer[];
   students?: Student[];
   schedules?: CourseSchedule[];
-}
-
-export interface PopulatedCourseEnrollment extends Omit<CourseEnrollment, 'course' | 'student'> {
-  course: Course;
-  student: Student;
 }

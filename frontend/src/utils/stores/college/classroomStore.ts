@@ -45,12 +45,12 @@ export const useClassroomStore = defineStore('classroom', () => {
     }
   }
 
-  async function createClassroom(data: Omit<Classroom, 'id'>) {
+  async function createClassroom(data: Partial<Omit<Classroom, 'id'>>) {
     if (loading.value) return;
-    
     loading.value = true;
     try {
-      const newClassroom = await ClassroomService.createClassroom(data);
+      // Cast to Omit<Classroom, 'id'> for the service, but only send required fields
+      const newClassroom = await ClassroomService.createClassroom(data as Omit<Classroom, 'id'>);
       classrooms.value.push(newClassroom);
       return newClassroom;
     } catch (err) {

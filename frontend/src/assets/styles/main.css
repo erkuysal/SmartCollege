@@ -1,0 +1,146 @@
+/**
+ * Smart College Main CSS
+ * Import all design system files and global styles here
+ */
+
+/* Import design system */
+@import './designSystem.css';
+@import './animations.css';
+
+/* Global styles */
+html, body {
+  font-family: var(--font-family-primary);
+  font-size: 16px;
+  line-height: var(--line-height-md);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  margin: 0;
+  padding: 0;
+  scroll-behavior: smooth;
+}
+
+/* Remove focus outline for mouse users, but keep it for keyboard users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Card enhancements */
+.v-card {
+  transition: box-shadow var(--transition-duration-short) var(--transition-easing-ease-out), 
+              transform var(--transition-duration-short) var(--transition-easing-ease-out);
+}
+
+.v-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Button enhancements */
+.v-btn {
+  font-weight: var(--font-weight-medium);
+  text-transform: none;
+  letter-spacing: 0.0178571em;
+}
+
+.v-btn--elevated:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Form field styling */
+.v-field {
+  border-radius: var(--border-radius-sm) !important;
+}
+
+.v-field--focused {
+  border-color: var(--color-primary);
+}
+
+.v-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Table styling */
+.v-data-table {
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.v-data-table__tr:hover td {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Content area spacing */
+.section-spacing {
+  margin-bottom: var(--spacing-xl);
+}
+
+.page-padding {
+  padding: var(--spacing-lg);
+}
+
+@media (max-width: 600px) {
+  .page-padding {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Accessibility helper classes */
+.screen-reader-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Custom scrollbar for Webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-grey-100);
+  border-radius: var(--border-radius-pill);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-grey-400);
+  border-radius: var(--border-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grey-500);
+}
+
+/* Dark mode scrollbar adjustments */
+.v-theme--dark ::-webkit-scrollbar-track {
+  background: var(--color-grey-800);
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb {
+  background: var(--color-grey-700);
+}
+
+.v-theme--dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grey-600);
+} 
