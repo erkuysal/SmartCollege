@@ -1,0 +1,182 @@
+@use '../theme' as theme;
+@use '../theme/colors' as *;
+@use '../theme/spacing' as *;
+@use '../theme/transitions' as *;
+@use '../theme/shadows' as *;
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: theme.$color-overlay;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-md;
+  
+  &.scrim {
+    background-color: theme.$color-scrim;
+  }
+}
+
+.modal-container {
+  background-color: var(--color-background);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 500px;
+  max-height: calc(100vh - #{$spacing-xl});
+  display: flex;
+  flex-direction: column;
+  animation: modal-in $transition-normal;
+  
+  &.large {
+    max-width: 800px;
+  }
+  
+  &.small {
+    max-width: 400px;
+  }
+  
+  &.fullscreen {
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+.modal-header {
+  padding: $spacing-md;
+  border-bottom: 1px solid $color-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: theme.$color-text-primary;
+    margin: 0;
+  }
+  
+  .modal-close {
+    padding: $spacing-xs;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: theme.$color-text-secondary;
+    transition: color $transition-fast;
+    
+    &:hover {
+      color: theme.$color-text-primary;
+    }
+  }
+}
+
+.modal-body {
+  padding: $spacing-md;
+  overflow-y: auto;
+  flex: 1;
+  
+  &.no-padding {
+    padding: 0;
+  }
+}
+
+.modal-footer {
+  padding: $spacing-md;
+  border-top: 1px solid $color-border;
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  
+  &.left {
+    justify-content: flex-start;
+  }
+  
+  &.center {
+    justify-content: center;
+  }
+  
+  &.space-between {
+    justify-content: space-between;
+  }
+}
+
+// Modal Animations
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Modal Variants
+.modal-container {
+  &.alert {
+    max-width: 400px;
+    
+    .modal-body {
+      text-align: center;
+      padding: $spacing-xl $spacing-md;
+    }
+    
+    .modal-footer {
+      justify-content: center;
+    }
+  }
+  
+  &.confirm {
+    max-width: 400px;
+    
+    .modal-body {
+      text-align: center;
+      padding: $spacing-xl $spacing-md;
+    }
+  }
+  
+  &.form {
+    .modal-body {
+      padding: $spacing-lg;
+    }
+  }
+}
+
+// Modal States
+.modal-container {
+  &.loading {
+    .modal-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+  }
+  
+  &.error {
+    .modal-body {
+      color: theme.$color-error;
+    }
+  }
+}
+
+// Responsive Adjustments
+@media (max-width: 768px) {
+  .modal-container {
+    max-width: 100%;
+    margin: $spacing-md;
+  }
+  
+  .modal-overlay {
+    padding: 0;
+  }
+} 

@@ -11,11 +11,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,79 +20,53 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-198jya$3n6^1l6lbp&__tiyepth7nu+$0tr_*@ay3_e7p^_@2y')
+SECRET_KEY = 'django-insecure-%r1vwjx&r##a1ca_kg_)uphf$9ad3wna3@8)o%t$34-qmuxk$x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = []
 
-AUTH_USER_MODEL = 'base.User'
+RFID_SERIAL_PORT = '/dev/cu.usbserial-1140'
+RFID_PORT = RFID_SERIAL_PORT  # Alias for backward compatibility
+RFID_BAUDRATE = 115200  # Default baudrate for RFID reader
 
+TIME_ZONE = 'Europe/Istanbul'
+USE_TZ = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,  # or whatever default page size you want
+}
 
 # Application definition
 
 INSTALLED_APPS = [
-    # ---------- DEFAULT -----------
-
-    # ------------------------------
+    'users',  # Must come before django.contrib.auth
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # -------- PLUG - INS --------
     'rest_framework',
-    'drf_spectacular',
+    'attendance',
+    'rfid',
+    'wallet',
+    'academic',
     'corsheaders',
-    'django_filters',
-    # ---------- LOCAL -----------
-    # --- College ---
-    'college.departments',
-    'college.faculties',
-    'college.courses',
-    'college.classrooms',
-    'college.facilities',  # NEW: Adds hostel, cafeteria, library, etc.
-    'college.schedules',
-    # ---
-    # 'college.schedules.apps.SchedulesConfig',
-    # 'college.courses.apps.CoursesConfig',
-    # 'college.classrooms.apps.ClassroomsConfig',
-
-    # --- Users ---
-    'users.base',  # NEW: Common user authentication (login, roles)
-    'users.staff',
-    'users.lecturers',
-    'users.students',
-
-    # --- Attendance & Academic Records ---
-    'academics.attendance',  # NEW: Tracks RFID-based attendance
-    'academics.grades',  # NEW: Stores student grades & performance
-    'academics.enrollment',  # NEW: Manages student course enrollment
-    'academics.bindings',  # NEW: Many-to-many relationships between models
-
-    # --- Transactions & Services ---
-    'transactions.rfid',  # Renamed for clarity
-    'transactions.payments',  # NEW: Handles cafeteria purchases, hostel payments
-
-    # --- Security & Access Control ---
-    'security.audit_logs',  # NEW: Tracks actions performed in the system
-    'security.authentication',  # NEW: MFA, password resets, etc.
-
-    # --- Utilities ---
-    'utilities',  # Main utilities app
-    'utilities.rfid_util',
-    'utilities.notifications',  # NEW: SMS, email, push notifications
-    'utilities.reports',  # NEW: Generates reports for admins
-
+    'drf_spectacular',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    # -------------------------------------
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -178,25 +147,51 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ----------------- CORS -----------------
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development! Configure specific origins in production
+CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # Vue.js dev server
+# Optional: Configure specific origins instead of allowing all
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # React default port
+#     "http://127.0.0.1:3000",
+#     # Add your frontend URL here
+# ]
+
+# Optional: Configure allowed methods and headers
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    # You can also configure pagination, authentication, etc.
-}
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
+# DRF Spectacular settings
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Student API',
-    'DESCRIPTION': 'API for student management',
+    'TITLE': 'Smart Attendance API',
+    'DESCRIPTION': 'API documentation for Smart Attendance System',
     'VERSION': '1.0.0',
-    # 'ENUM_NAME_OVERRIDES': {
-    #     'academics.attendance.ATTENDANCE_STATUS_CHOICES': 'AttendanceStatusEnum',
-    #     'users.students.STUDENT_STATUS_CHOICES': 'StudentStatusEnum',
-    # },
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
 }
+AUTH_USER_MODEL = 'users.BaseUser'
 

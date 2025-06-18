@@ -1,0 +1,205 @@
+// Button Styles
+@use '../theme' as theme;
+
+// Base Button
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: theme.$spacing-sm theme.$spacing-md;
+  font-size: theme.$font-size-base;
+  font-weight: theme.$font-weight-medium;
+  line-height: theme.$line-height-normal;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  border-radius: theme.$border-radius-md;
+  @include theme.theme-transition((background-color, border-color, color, box-shadow));
+  
+  &:focus {
+    @include theme.theme-focus;
+  }
+  
+  &:disabled {
+    @include theme.theme-disabled;
+  }
+  
+  // Icon
+  .icon {
+    margin-right: theme.$spacing-xs;
+  }
+  
+  // Loading State
+  &.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      width: 1em;
+      height: 1em;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: button-spin 0.75s linear infinite;
+    }
+  }
+}
+
+// Variants
+.btn-primary {
+  background-color: theme.$theme-primary;
+  color: theme.$theme-primary-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-primary-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-primary-light;
+  }
+}
+
+.btn-secondary {
+  background-color: theme.$theme-secondary;
+  color: theme.$theme-secondary-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-secondary-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-secondary-light;
+  }
+}
+
+.btn-outline {
+  background-color: transparent;
+  border-color: theme.$theme-primary;
+  color: theme.$theme-primary;
+  
+  &:hover {
+    background-color: theme.$theme-primary;
+    color: theme.$theme-primary-contrast;
+  }
+  
+  &:active {
+    background-color: theme.$theme-primary-dark;
+  }
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: theme.$theme-text-primary;
+  
+  &:hover {
+    background-color: theme.$theme-surface-2;
+  }
+  
+  &:active {
+    background-color: theme.$theme-surface-3;
+  }
+}
+
+// Sizes
+.btn-sm {
+  padding: theme.$spacing-xs theme.$spacing-sm;
+  font-size: theme.$font-size-sm;
+}
+
+.btn-lg {
+  padding: theme.$spacing-md theme.$spacing-lg;
+  font-size: theme.$font-size-lg;
+}
+
+// Status Variants
+.btn-success {
+  background-color: theme.$theme-success;
+  color: theme.$theme-success-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-success-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-success-light;
+  }
+}
+
+.btn-warning {
+  background-color: theme.$theme-warning;
+  color: theme.$theme-warning-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-warning-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-warning-light;
+  }
+}
+
+.btn-error {
+  background-color: theme.$theme-error;
+  color: theme.$theme-error-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-error-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-error-light;
+  }
+}
+
+.btn-info {
+  background-color: theme.$theme-info;
+  color: theme.$theme-info-contrast;
+  
+  &:hover {
+    background-color: theme.$theme-info-dark;
+  }
+  
+  &:active {
+    background-color: theme.$theme-info-light;
+  }
+}
+
+// Button Group
+.btn-group {
+  display: inline-flex;
+  
+  .btn {
+    border-radius: 0;
+    
+    &:not(:first-child) {
+      margin-left: -1px;
+    }
+    
+    &:first-child {
+      border-top-left-radius: theme.$border-radius-md;
+      border-bottom-left-radius: theme.$border-radius-md;
+    }
+    
+    &:last-child {
+      border-top-right-radius: theme.$border-radius-md;
+      border-bottom-right-radius: theme.$border-radius-md;
+    }
+  }
+}
+
+// Animation
+@keyframes button-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} 

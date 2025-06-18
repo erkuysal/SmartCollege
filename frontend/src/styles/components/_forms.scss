@@ -1,0 +1,173 @@
+@use '../theme' as theme;
+@use '../theme/colors' as *;
+@use '../theme/spacing' as *;
+@use '../theme/transitions' as *;
+
+.form-group {
+  margin-bottom: theme.$spacing-md;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-label {
+  display: block;
+  margin-bottom: theme.$spacing-xs;
+  font-weight: 500;
+  color: theme.$color-text-primary;
+  
+  &.required::after {
+    content: '*';
+    color: theme.$color-error;
+    margin-left: theme.$spacing-xxs;
+  }
+}
+
+.form-control {
+  width: 100%;
+  padding: theme.$spacing-sm theme.$spacing-md;
+  border: 1px solid theme.$color-border;
+  border-radius: 4px;
+  background-color: var(--color-background);
+  color: theme.$color-text-primary;
+  font-size: 0.875rem;
+  transition: all theme.$transition-fast;
+  
+  &:hover {
+    border-color: theme.$color-text-secondary;
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: theme.$color-primary;
+    box-shadow: 0 0 0 2px rgba(theme.$color-primary, 0.1);
+  }
+  
+  &:disabled {
+    background-color: var(--color-surface);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  
+  &::placeholder {
+    color: theme.$color-text-disabled;
+  }
+  
+  &.error {
+    border-color: theme.$color-error;
+    
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(theme.$color-error, 0.1);
+    }
+  }
+}
+
+.form-text {
+  margin-top: theme.$spacing-xs;
+  font-size: 0.75rem;
+  color: theme.$color-text-secondary;
+  
+  &.error {
+    color: theme.$color-error;
+  }
+}
+
+.form-select {
+  @extend .form-control;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8.825L1.175 4 2.05 3.125 6 7.075 9.95 3.125 10.825 4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right theme.$spacing-md center;
+  padding-right: theme.$spacing-xl;
+}
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: theme.$spacing-sm;
+  cursor: pointer;
+  
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+  }
+  
+  .checkbox-label {
+    font-size: 0.875rem;
+    color: theme.$color-text-primary;
+  }
+}
+
+.form-radio {
+  @extend .form-checkbox;
+  
+  input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: theme.$spacing-sm;
+  margin-top: theme.$spacing-lg;
+  padding-top: theme.$spacing-md;
+  border-top: 1px solid theme.$color-border;
+}
+
+// Form Grid
+.form-grid {
+  display: grid;
+  gap: theme.$spacing-md;
+  
+  &.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  &.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+// Form Validation States
+.form-control {
+  &.valid {
+    border-color: theme.$color-success;
+    
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(theme.$color-success, 0.1);
+    }
+  }
+  
+  &.invalid {
+    border-color: theme.$color-error;
+    
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(theme.$color-error, 0.1);
+    }
+  }
+}
+
+// Form Field Groups
+.form-field-group {
+  display: flex;
+  gap: theme.$spacing-sm;
+  
+  .form-control {
+    flex: 1;
+  }
+  
+  .form-group {
+    margin-bottom: 0;
+  }
+} 

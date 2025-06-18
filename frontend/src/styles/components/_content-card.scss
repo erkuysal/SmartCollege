@@ -1,0 +1,43 @@
+// Content Card Styles
+@use '../theme' as theme;
+
+.content-card {
+  background-color: theme.$theme-surface-0;
+  border-radius: theme.$border-radius-lg;
+  @include theme.theme-shadow(1);
+  @include theme.theme-transition((transform, box-shadow));
+  
+  // Card Header
+  .v-card-title {
+    padding: theme.$spacing-lg;
+    font-size: theme.$font-size-xl;
+    font-weight: theme.$font-weight-semibold;
+    color: theme.$theme-text-primary;
+    border-bottom: 1px solid theme.$theme-border-light;
+    
+    .v-divider {
+      border-color: theme.$theme-border-light;
+    }
+  }
+  
+  // Card Content
+  .v-card-text {
+    padding: theme.$spacing-lg;
+    color: theme.$theme-text-secondary;
+  }
+  
+  // Hover State
+  &:hover {
+    transform: translateY(-2px);
+    @include theme.theme-shadow(2);
+  }
+  
+  // Dark Mode
+  @include theme.theme-dark {
+    background-color: theme.$theme-surface-1;
+    
+    .v-card-title {
+      border-bottom-color: theme.$theme-border-light;
+    }
+  }
+} 

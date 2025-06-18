@@ -1,0 +1,86 @@
+@use '../theme/colors' as *;
+@use '../theme/spacing' as *;
+@use '../theme/shadows' as *;
+@use '../theme/transitions' as *;
+
+// Base Card
+.content-card {
+  background-color: var(--color-background);
+  border-radius: 8px;
+  transition: transform $transition-normal, box-shadow $transition-normal;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .card-title {
+    padding: $spacing-card;
+    border-bottom: 1px solid $color-border;
+    font-weight: 500;
+    color: $color-text-primary;
+  }
+  
+  .card-content {
+    padding: $spacing-card;
+  }
+}
+
+// Form Card
+.form-card {
+  @extend .content-card;
+  max-width: 600px;
+  margin: 0 auto;
+  
+  .form-header {
+    padding: $spacing-card;
+    border-bottom: 1px solid $color-border;
+    
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: $color-text-primary;
+    }
+  }
+  
+  .form-content {
+    padding: $spacing-card;
+  }
+  
+  .form-actions {
+    padding: $spacing-card;
+    border-top: 1px solid $color-border;
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+  }
+}
+
+// List Card
+.list-card {
+  @extend .content-card;
+  
+  .list-header {
+    padding: $spacing-card;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid $color-border;
+    
+    .list-title {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: $color-text-primary;
+    }
+    
+    .list-actions {
+      display: flex;
+      gap: $spacing-sm;
+    }
+  }
+  
+  .list-content {
+    padding: $spacing-card;
+  }
+} 

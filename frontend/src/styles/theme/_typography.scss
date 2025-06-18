@@ -1,0 +1,79 @@
+// Font Families
+:root {
+  --font-family-primary: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-secondary: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+// Font Sizes
+:root {
+  // Base font size for rem calculations
+  --font-size-base: 16px;
+  
+  // Scale based on 1.25 ratio (major third)
+  --font-size-xs: 0.75rem;    // 12px
+  --font-size-sm: 0.875rem;   // 14px
+  --font-size-base: 1rem;     // 16px
+  --font-size-lg: 1.125rem;   // 18px
+  --font-size-xl: 1.25rem;    // 20px
+  --font-size-2xl: 1.5rem;    // 24px
+  --font-size-3xl: 1.875rem;  // 30px
+  --font-size-4xl: 2.25rem;   // 36px
+  --font-size-5xl: 3rem;      // 48px
+}
+
+// Font Weights
+:root {
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+}
+
+// Line Heights
+:root {
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+}
+
+// Letter Spacing
+:root {
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
+}
+
+// SCSS Variables for internal use
+$font-family-primary: var(--font-family-primary);
+$font-family-secondary: var(--font-family-secondary);
+$font-family-mono: var(--font-family-mono);
+
+$font-size-base: var(--font-size-base);
+$font-size-xs: var(--font-size-xs);
+$font-size-sm: var(--font-size-sm);
+$font-size-lg: var(--font-size-lg);
+$font-size-xl: var(--font-size-xl);
+$font-size-2xl: var(--font-size-2xl);
+$font-size-3xl: var(--font-size-3xl);
+$font-size-4xl: var(--font-size-4xl);
+$font-size-5xl: var(--font-size-5xl);
+
+$line-height-tight: var(--line-height-tight);
+$line-height-snug: var(--line-height-snug);
+$line-height-normal: var(--line-height-normal);
+$line-height-relaxed: var(--line-height-relaxed);
+$line-height-loose: var(--line-height-loose);
+
+$letter-spacing-tighter: var(--letter-spacing-tighter);
+$letter-spacing-tight: var(--letter-spacing-tight);
+$letter-spacing-normal: var(--letter-spacing-normal);
+$letter-spacing-wide: var(--letter-spacing-wide);
+$letter-spacing-wider: var(--letter-spacing-wider);
+$letter-spacing-widest: var(--letter-spacing-widest); 

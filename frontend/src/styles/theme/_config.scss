@@ -1,0 +1,182 @@
+// Theme Configuration
+:root {
+  // Theme Mode
+  --theme-mode: 'light';
+  
+  // Theme Colors
+  --theme-primary: #1976d2;
+  --theme-primary-light: #42a5f5;
+  --theme-primary-dark: #1565c0;
+  --theme-primary-contrast: #ffffff;
+  
+  --theme-secondary: #9c27b0;
+  --theme-secondary-light: #ba68c8;
+  --theme-secondary-dark: #7b1fa2;
+  --theme-secondary-contrast: #ffffff;
+  
+  // Surface Colors
+  --theme-surface-0: #f8fafc;
+  --theme-surface-1: #ffffff;
+  --theme-surface-2: #f1f5f9;
+  --theme-surface-3: #e2e8f0;
+  --theme-surface-4: #cbd5e1;
+  
+  // Text Colors
+  --theme-text-primary: #1a202c;
+  --theme-text-secondary: #4a5568;
+  --theme-text-disabled: #a0aec0;
+  --theme-text-hint: #a0aec0;
+  
+  // Status Colors
+  --theme-success: #4caf50;
+  --theme-success-light: #81c784;
+  --theme-success-dark: #388e3c;
+  --theme-success-contrast: #ffffff;
+  
+  --theme-warning: #ff9800;
+  --theme-warning-light: #ffb74d;
+  --theme-warning-dark: #f57c00;
+  --theme-warning-contrast: #1a202c;
+  
+  --theme-error: #f44336;
+  --theme-error-light: #e57373;
+  --theme-error-dark: #d32f2f;
+  --theme-error-contrast: #ffffff;
+  
+  --theme-info: #2196f3;
+  --theme-info-light: #64b5f6;
+  --theme-info-dark: #1976d2;
+  --theme-info-contrast: #ffffff;
+  
+  // Border Colors
+  --theme-border-light: #e2e8f0;
+  --theme-border-medium: #cbd5e1;
+  --theme-border-dark: #94a3b8;
+  
+  // Shadow Colors
+  --theme-shadow-color: rgba(0, 0, 0, 0.08);
+  
+  // Overlay Colors
+  --theme-overlay-light: rgba(0, 0, 0, 0.04);
+  --theme-overlay-medium: rgba(0, 0, 0, 0.08);
+  --theme-overlay-dark: rgba(0, 0, 0, 0.16);
+  
+  // Animation
+  --theme-transition-fast: 150ms;
+  --theme-transition-normal: 300ms;
+  --theme-transition-slow: 500ms;
+  
+  // Z-index Scale
+  --theme-z-dropdown: 1000;
+  --theme-z-sticky: 1020;
+  --theme-z-fixed: 1030;
+  --theme-z-modal: 1040;
+  --theme-z-popover: 1050;
+  --theme-z-tooltip: 1060;
+}
+
+// Dark Theme
+[data-theme="dark"] {
+  --theme-mode: 'dark';
+  
+  // Surface Colors
+  --theme-surface-0: #232323;
+  --theme-surface-1: #292929;
+  --theme-surface-2: #323232;
+  --theme-surface-3: #414141;
+  --theme-surface-4: #515151;
+  
+  // Text Colors
+  --theme-text-primary: rgba(255, 255, 255, 0.96);
+  --theme-text-secondary: rgba(255, 255, 255, 0.75);
+  --theme-text-disabled: rgba(255, 255, 255, 0.45);
+  --theme-text-hint: rgba(255, 255, 255, 0.45);
+  
+  // Border Colors
+  --theme-border-light: rgba(255, 255, 255, 0.16);
+  --theme-border-medium: rgba(255, 255, 255, 0.28);
+  --theme-border-dark: rgba(255, 255, 255, 0.38);
+  
+  // Shadow Colors
+  --theme-shadow-color: rgba(0, 0, 0, 0.32);
+  
+  // Overlay Colors
+  --theme-overlay-light: rgba(0, 0, 0, 0.52);
+  --theme-overlay-medium: rgba(0, 0, 0, 0.68);
+  --theme-overlay-dark: rgba(0, 0, 0, 0.84);
+}
+
+// SCSS Variables
+$theme-mode: var(--theme-mode);
+
+// Primary Colors
+$theme-primary: var(--theme-primary);
+$theme-primary-light: var(--theme-primary-light);
+$theme-primary-dark: var(--theme-primary-dark);
+$theme-primary-contrast: var(--theme-primary-contrast);
+
+// Secondary Colors
+$theme-secondary: var(--theme-secondary);
+$theme-secondary-light: var(--theme-secondary-light);
+$theme-secondary-dark: var(--theme-secondary-dark);
+$theme-secondary-contrast: var(--theme-secondary-contrast);
+
+// Surface Colors
+$theme-surface-0: var(--theme-surface-0);
+$theme-surface-1: var(--theme-surface-1);
+$theme-surface-2: var(--theme-surface-2);
+$theme-surface-3: var(--theme-surface-3);
+$theme-surface-4: var(--theme-surface-4);
+
+// Text Colors
+$theme-text-primary: var(--theme-text-primary);
+$theme-text-secondary: var(--theme-text-secondary);
+$theme-text-disabled: var(--theme-text-disabled);
+$theme-text-hint: var(--theme-text-hint);
+
+// Status Colors
+$theme-success: var(--theme-success);
+$theme-success-light: var(--theme-success-light);
+$theme-success-dark: var(--theme-success-dark);
+$theme-success-contrast: var(--theme-success-contrast);
+
+$theme-warning: var(--theme-warning);
+$theme-warning-light: var(--theme-warning-light);
+$theme-warning-dark: var(--theme-warning-dark);
+$theme-warning-contrast: var(--theme-warning-contrast);
+
+$theme-error: var(--theme-error);
+$theme-error-light: var(--theme-error-light);
+$theme-error-dark: var(--theme-error-dark);
+$theme-error-contrast: var(--theme-error-contrast);
+
+$theme-info: var(--theme-info);
+$theme-info-light: var(--theme-info-light);
+$theme-info-dark: var(--theme-info-dark);
+$theme-info-contrast: var(--theme-info-contrast);
+
+// Border Colors
+$theme-border-light: var(--theme-border-light);
+$theme-border-medium: var(--theme-border-medium);
+$theme-border-dark: var(--theme-border-dark);
+
+// Shadow Colors
+$theme-shadow-color: var(--theme-shadow-color);
+
+// Overlay Colors
+$theme-overlay-light: var(--theme-overlay-light);
+$theme-overlay-medium: var(--theme-overlay-medium);
+$theme-overlay-dark: var(--theme-overlay-dark);
+
+// Animation
+$theme-transition-fast: var(--theme-transition-fast);
+$theme-transition-normal: var(--theme-transition-normal);
+$theme-transition-slow: var(--theme-transition-slow);
+
+// Z-index Scale
+$theme-z-dropdown: var(--theme-z-dropdown);
+$theme-z-sticky: var(--theme-z-sticky);
+$theme-z-fixed: var(--theme-z-fixed);
+$theme-z-modal: var(--theme-z-modal);
+$theme-z-popover: var(--theme-z-popover);
+$theme-z-tooltip: var(--theme-z-tooltip); 

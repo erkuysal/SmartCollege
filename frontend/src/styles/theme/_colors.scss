@@ -1,0 +1,181 @@
+// Color System
+:root {
+  // Primary Colors
+  --color-primary: #6750a4;
+  --color-primary-light: #7f67be;
+  --color-primary-dark: #4f378b;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e8def8;
+  --color-on-primary-container: #21005e;
+  
+  // Secondary Colors
+  --color-secondary: #625b71;
+  --color-secondary-light: #7a7289;
+  --color-secondary-dark: #4a4458;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e8def8;
+  --color-on-secondary-container: #1e192b;
+  
+  // Surface Colors - Adjusted for better balance
+  --color-surface: #f8f5fa;
+  --color-surface-dim: #f0edf2;
+  --color-surface-bright: #f8f5fa;
+  --color-surface-container-lowest: #f8f5fa;
+  --color-surface-container-low: #f3f0f5;
+  --color-surface-container: #eeeaf0;
+  --color-surface-container-high: #e8e4ea;
+  --color-surface-container-highest: #e2dee4;
+  
+  // Text Colors - Improved contrast
+  --color-text-primary: #1c1b1e;
+  --color-text-secondary: #3c3a3f;
+  --color-text-tertiary: #5c5a5f;
+  --color-text-disabled: #9e9ca0;
+  
+  // Status Colors - Adjusted for better visibility
+  --color-success: #2e7d32;
+  --color-success-container: #c8e6c9;
+  --color-on-success: #ffffff;
+  --color-on-success-container: #1b5e20;
+  
+  --color-warning: #ed6c02;
+  --color-warning-container: #ffe0b2;
+  --color-on-warning: #ffffff;
+  --color-on-warning-container: #e65100;
+  
+  --color-error: #d32f2f;
+  --color-error-container: #f2b8b5;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #601410;
+  
+  --color-info: #0288d1;
+  --color-info-container: #bbdefb;
+  --color-on-info: #ffffff;
+  --color-on-info-container: #0d47a1;
+  
+  // Border Colors - Improved visibility
+  --color-border: #5c5a5f;
+  --color-border-focus: var(--color-primary);
+  
+  // Overlay Colors
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-scrim: rgba(0, 0, 0, 0.32);
+}
+
+// Dark mode colors
+[data-theme="dark"] {
+  // Primary Colors
+  --color-primary: #d0bcff;
+  --color-primary-light: #e8def8;
+  --color-primary-dark: #b69df8;
+  --color-on-primary: #381e72;
+  --color-primary-container: #4f378b;
+  --color-on-primary-container: #eaddff;
+  
+  // Secondary Colors
+  --color-secondary: #ccc2dc;
+  --color-secondary-light: #e8def8;
+  --color-secondary-dark: #b4a7d6;
+  --color-on-secondary: #332d41;
+  --color-secondary-container: #4a4458;
+  --color-on-secondary-container: #e8def8;
+  
+  // Surface Colors - Adjusted for better dark mode balance
+  --color-surface: #1c1b1f;
+  --color-surface-dim: #141218;
+  --color-surface-bright: #1c1b1f;
+  --color-surface-container-lowest: #0f0d13;
+  --color-surface-container-low: #1a1a1e;
+  --color-surface-container: #1f1f23;
+  --color-surface-container-high: #2d2d31;
+  --color-surface-container-highest: #36363a;
+  
+  // Text Colors - Improved dark mode contrast
+  --color-text-primary: #e6e1e5;
+  --color-text-secondary: #cac4d0;
+  --color-text-tertiary: #938f99;
+  --color-text-disabled: #49454f;
+  
+  // Status Colors - Adjusted for dark mode visibility
+  --color-success: #81c784;
+  --color-success-container: #1b5e20;
+  --color-on-success: #ffffff;
+  --color-on-success-container: #c8e6c9;
+  
+  --color-warning: #ffb74d;
+  --color-warning-container: #e65100;
+  --color-on-warning: #ffffff;
+  --color-on-warning-container: #ffe0b2;
+  
+  --color-error: #ef9a9a;
+  --color-error-container: #601410;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #f2b8b5;
+  
+  --color-info: #64b5f6;
+  --color-info-container: #0d47a1;
+  --color-on-info: #ffffff;
+  --color-on-info-container: #bbdefb;
+  
+  // Border Colors
+  --color-border: #938f99;
+  
+  // Overlay Colors
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-scrim: rgba(0, 0, 0, 0.5);
+}
+
+// SCSS Variables for internal use
+$color-primary: var(--color-primary);
+$color-primary-light: var(--color-primary-light);
+$color-primary-dark: var(--color-primary-dark);
+$color-on-primary: var(--color-on-primary);
+$color-primary-container: var(--color-primary-container);
+$color-on-primary-container: var(--color-on-primary-container);
+
+$color-secondary: var(--color-secondary);
+$color-secondary-light: var(--color-secondary-light);
+$color-secondary-dark: var(--color-secondary-dark);
+$color-on-secondary: var(--color-on-secondary);
+$color-secondary-container: var(--color-secondary-container);
+$color-on-secondary-container: var(--color-on-secondary-container);
+
+$color-surface: var(--color-surface);
+$color-surface-dim: var(--color-surface-dim);
+$color-surface-bright: var(--color-surface-bright);
+$color-surface-container-lowest: var(--color-surface-container-lowest);
+$color-surface-container-low: var(--color-surface-container-low);
+$color-surface-container: var(--color-surface-container);
+$color-surface-container-high: var(--color-surface-container-high);
+$color-surface-container-highest: var(--color-surface-container-highest);
+
+$color-text-primary: var(--color-text-primary);
+$color-text-secondary: var(--color-text-secondary);
+$color-text-tertiary: var(--color-text-tertiary);
+$color-text-disabled: var(--color-text-disabled);
+
+$color-success: var(--color-success);
+$color-success-container: var(--color-success-container);
+$color-on-success: var(--color-on-success);
+$color-on-success-container: var(--color-on-success-container);
+
+$color-warning: var(--color-warning);
+$color-warning-container: var(--color-warning-container);
+$color-on-warning: var(--color-on-warning);
+$color-on-warning-container: var(--color-on-warning-container);
+
+$color-error: var(--color-error);
+$color-error-container: var(--color-error-container);
+$color-on-error: var(--color-on-error);
+$color-on-error-container: var(--color-on-error-container);
+
+$color-info: var(--color-info);
+$color-info-container: var(--color-info-container);
+$color-on-info: var(--color-on-info);
+$color-on-info-container: var(--color-on-info-container);
+
+$color-border: var(--color-border);
+$color-border-focus: var(--color-border-focus);
+
+$color-overlay: var(--color-overlay);
+$color-scrim: var(--color-scrim); 

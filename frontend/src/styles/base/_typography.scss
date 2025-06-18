@@ -1,0 +1,281 @@
+@use '../theme' as theme;
+@use '../theme/colors' as *;
+
+// Base Typography
+body {
+  font-family: theme.$font-family-primary;
+  font-size: theme.$font-size-base;
+  line-height: theme.$line-height-normal;
+  color: theme.$color-text-primary;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Headings
+h1, .h1 {
+  font-size: theme.$font-size-4xl;
+  line-height: theme.$line-height-tight;
+  font-weight: theme.$font-weight-bold;
+  margin-bottom: theme.$spacing-lg;
+}
+
+h2, .h2 {
+  font-size: theme.$font-size-3xl;
+  line-height: theme.$line-height-tight;
+  font-weight: theme.$font-weight-semibold;
+  margin-bottom: theme.$spacing-md;
+}
+
+h3, .h3 {
+  font-size: theme.$font-size-2xl;
+  line-height: theme.$line-height-snug;
+  font-weight: theme.$font-weight-semibold;
+  margin-bottom: theme.$spacing-md;
+}
+
+h4, .h4 {
+  font-size: theme.$font-size-xl;
+  line-height: theme.$line-height-snug;
+  font-weight: theme.$font-weight-medium;
+  margin-bottom: theme.$spacing-sm;
+}
+
+h5, .h5 {
+  font-size: theme.$font-size-lg;
+  line-height: theme.$line-height-snug;
+  font-weight: theme.$font-weight-medium;
+  margin-bottom: theme.$spacing-sm;
+}
+
+h6, .h6 {
+  font-size: theme.$font-size-base;
+  line-height: theme.$line-height-normal;
+  font-weight: theme.$font-weight-medium;
+  margin-bottom: theme.$spacing-sm;
+}
+
+// Text Styles
+.text-xs {
+  font-size: theme.$font-size-xs;
+  line-height: theme.$line-height-normal;
+}
+
+.text-sm {
+  font-size: theme.$font-size-sm;
+  line-height: theme.$line-height-normal;
+}
+
+.text-base {
+  font-size: theme.$font-size-base;
+  line-height: theme.$line-height-normal;
+}
+
+.text-lg {
+  font-size: theme.$font-size-lg;
+  line-height: theme.$line-height-relaxed;
+}
+
+.text-xl {
+  font-size: theme.$font-size-xl;
+  line-height: theme.$line-height-relaxed;
+}
+
+// Font Weights
+.font-light {
+  font-weight: theme.$font-weight-light;
+}
+
+.font-regular {
+  font-weight: theme.$font-weight-regular;
+}
+
+.font-medium {
+  font-weight: theme.$font-weight-medium;
+}
+
+.font-semibold {
+  font-weight: theme.$font-weight-semibold;
+}
+
+.font-bold {
+  font-weight: theme.$font-weight-bold;
+}
+
+// Line Heights
+.leading-tight {
+  line-height: theme.$line-height-tight;
+}
+
+.leading-snug {
+  line-height: theme.$line-height-snug;
+}
+
+.leading-normal {
+  line-height: theme.$line-height-normal;
+}
+
+.leading-relaxed {
+  line-height: theme.$line-height-relaxed;
+}
+
+.leading-loose {
+  line-height: theme.$line-height-loose;
+}
+
+// Letter Spacing
+.tracking-tighter {
+  letter-spacing: theme.$letter-spacing-tighter;
+}
+
+.tracking-tight {
+  letter-spacing: theme.$letter-spacing-tight;
+}
+
+.tracking-normal {
+  letter-spacing: theme.$letter-spacing-normal;
+}
+
+.tracking-wide {
+  letter-spacing: theme.$letter-spacing-wide;
+}
+
+.tracking-wider {
+  letter-spacing: theme.$letter-spacing-wider;
+}
+
+.tracking-widest {
+  letter-spacing: theme.$letter-spacing-widest;
+}
+
+// Text Colors
+.text-primary {
+  color: theme.$color-text-primary;
+}
+
+.text-secondary {
+  color: theme.$color-text-secondary;
+}
+
+.text-disabled {
+  color: theme.$color-text-disabled;
+}
+
+// Text Alignment
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+// Text Transform
+.uppercase {
+  text-transform: uppercase;
+}
+
+.lowercase {
+  text-transform: lowercase;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+// Text Decoration
+.underline {
+  text-decoration: underline;
+}
+
+.line-through {
+  text-decoration: line-through;
+}
+
+.no-underline {
+  text-decoration: none;
+}
+
+// Font Styles
+.italic {
+  font-style: italic;
+}
+
+.not-italic {
+  font-style: normal;
+}
+
+// Font Families
+.font-primary {
+  font-family: theme.$font-family-primary;
+}
+
+.font-secondary {
+  font-family: theme.$font-family-secondary;
+}
+
+.font-mono {
+  font-family: theme.$font-family-mono;
+}
+
+// Text Overflow
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.break-words {
+  word-wrap: break-word;
+}
+
+.break-all {
+  word-break: break-all;
+}
+
+// Lists
+.list-none {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-disc {
+  list-style: disc;
+  padding-left: theme.$spacing-lg;
+}
+
+.list-decimal {
+  list-style: decimal;
+  padding-left: theme.$spacing-lg;
+}
+
+// Responsive Typography
+@media (max-width: 768px) {
+  h1, .h1 {
+    font-size: theme.$font-size-3xl;
+  }
+  
+  h2, .h2 {
+    font-size: theme.$font-size-2xl;
+  }
+  
+  h3, .h3 {
+    font-size: theme.$font-size-xl;
+  }
+  
+  h4, .h4 {
+    font-size: theme.$font-size-lg;
+  }
+  
+  h5, .h5 {
+    font-size: theme.$font-size-base;
+  }
+  
+  h6, .h6 {
+    font-size: theme.$font-size-sm;
+  }
+}

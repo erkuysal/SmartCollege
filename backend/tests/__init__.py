@@ -1,1 +1,0 @@
-# Main test package for SmartCollege 

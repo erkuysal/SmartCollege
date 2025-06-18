@@ -1,0 +1,209 @@
+// Theme Utilities
+
+// Color Functions
+@function theme-color($color-name, $variant: 'base') {
+  @if $variant == 'base' {
+    @return var(--theme-#{$color-name});
+  } @else {
+    @return var(--theme-#{$color-name}-#{$variant});
+  }
+}
+
+// Surface Functions
+@function theme-surface($level) {
+  @return var(--theme-surface-#{$level});
+}
+
+// Text Color Functions
+@function theme-text($variant) {
+  @return var(--theme-text-#{$variant});
+}
+
+// Shadow Mixins
+@mixin theme-shadow($level: 1) {
+  @if $level == 1 {
+    box-shadow: 0 1px 3px var(--theme-shadow-color);
+  } @else if $level == 2 {
+    box-shadow: 0 3px 6px var(--theme-shadow-color);
+  } @else if $level == 3 {
+    box-shadow: 0 6px 12px var(--theme-shadow-color);
+  } @else if $level == 4 {
+    box-shadow: 0 12px 24px var(--theme-shadow-color);
+  }
+}
+
+// Border Mixins
+@mixin theme-border($variant: 'light', $position: 'all') {
+  @if $position == 'all' {
+    border: 1px solid var(--theme-border-#{$variant});
+  } @else if $position == 'top' {
+    border-top: 1px solid var(--theme-border-#{$variant});
+  } @else if $position == 'right' {
+    border-right: 1px solid var(--theme-border-#{$variant});
+  } @else if $position == 'bottom' {
+    border-bottom: 1px solid var(--theme-border-#{$variant});
+  } @else if $position == 'left' {
+    border-left: 1px solid var(--theme-border-#{$variant});
+  }
+}
+
+// Transition Mixins
+@mixin theme-transition($properties: all, $duration: normal, $timing: ease-in-out) {
+  $duration-value: var(--theme-transition-#{$duration});
+  @if type-of($properties) == 'list' {
+    $transitions: ();
+    @each $property in $properties {
+      $transitions: append($transitions, $property $duration-value $timing, comma);
+    }
+    transition: $transitions;
+  } @else {
+    transition: $properties $duration-value $timing;
+  }
+}
+
+// Z-index Mixins
+@mixin theme-z($level) {
+  z-index: var(--theme-z-#{$level});
+}
+
+// Status Color Mixins
+@mixin theme-status($status, $property: 'color') {
+  #{$property}: theme-color($status);
+  
+  &:hover {
+    #{$property}: theme-color($status, 'dark');
+  }
+  
+  &:active {
+    #{$property}: theme-color($status, 'light');
+  }
+}
+
+// Focus Mixin
+@mixin theme-focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--theme-primary-light);
+}
+
+// Disabled Mixin
+@mixin theme-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+// Responsive Mixins
+@mixin theme-responsive($breakpoint) {
+  @if $breakpoint == 'sm' {
+    @media (min-width: 640px) { @content; }
+  } @else if $breakpoint == 'md' {
+    @media (min-width: 768px) { @content; }
+  } @else if $breakpoint == 'lg' {
+    @media (min-width: 1024px) { @content; }
+  } @else if $breakpoint == 'xl' {
+    @media (min-width: 1280px) { @content; }
+  } @else if $breakpoint == '2xl' {
+    @media (min-width: 1536px) { @content; }
+  }
+}
+
+// Dark Mode Mixin
+@mixin theme-dark {
+  [data-theme="dark"] & {
+    @content;
+  }
+}
+
+// Print Mixin
+@mixin theme-print {
+  @media print {
+    @content;
+  }
+}
+
+// Container Mixin
+@mixin theme-container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  
+  @include theme-responsive('sm') {
+    max-width: 640px;
+  }
+  
+  @include theme-responsive('md') {
+    max-width: 768px;
+  }
+  
+  @include theme-responsive('lg') {
+    max-width: 1024px;
+  }
+  
+  @include theme-responsive('xl') {
+    max-width: 1280px;
+  }
+  
+  @include theme-responsive('2xl') {
+    max-width: 1536px;
+  }
+}
+
+// Grid Mixin
+@mixin theme-grid($columns: 12, $gap: 1rem) {
+  display: grid;
+  grid-template-columns: repeat($columns, 1fr);
+  gap: $gap;
+}
+
+// Flex Mixin
+@mixin theme-flex($direction: row, $justify: flex-start, $align: stretch, $wrap: nowrap) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+  flex-wrap: $wrap;
+}
+
+// Aspect Ratio Mixin
+@mixin theme-aspect-ratio($width: 16, $height: 9) {
+  position: relative;
+  padding-bottom: percentage($height / $width);
+  
+  > * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// Truncate Mixin
+@mixin theme-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Scrollbar Mixin
+@mixin theme-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--theme-surface-2);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--theme-surface-4);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--theme-surface-3);
+    }
+  }
+} 

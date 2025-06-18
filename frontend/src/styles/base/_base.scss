@@ -1,0 +1,117 @@
+// Base Styles
+@use '../theme' as theme;
+
+// Reset and Base Styles
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: theme.$font-family-primary;
+  font-size: theme.$font-size-base;
+  line-height: theme.$line-height-normal;
+  color: theme.$theme-text-primary;
+  background-color: theme.$theme-surface-0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+// Links
+a {
+  color: theme.$theme-primary;
+  text-decoration: none;
+  @include theme.theme-transition(color);
+  
+  &:hover {
+    color: theme.$theme-primary-dark;
+  }
+  
+  &:active {
+    color: theme.$theme-primary-light;
+  }
+}
+
+// Images
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// Lists
+ul, ol {
+  list-style-position: inside;
+  margin: theme.$spacing-md 0;
+  padding: 0;
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+  margin: theme.$spacing-lg 0 theme.$spacing-md;
+  line-height: theme.$line-height-tight;
+  color: theme.$theme-text-primary;
+  font-weight: theme.$font-weight-bold;
+}
+
+// Paragraphs
+p {
+  margin: theme.$spacing-md 0;
+  line-height: theme.$line-height-relaxed;
+}
+
+// Form Elements
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: theme.$theme-text-primary;
+}
+
+// Focus Styles
+:focus {
+  @include theme.theme-focus;
+}
+
+// Selection
+::selection {
+  background-color: theme.$theme-primary-light;
+  color: theme.$theme-primary-contrast;
+}
+
+// Scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: theme.$theme-surface-2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: theme.$theme-surface-4;
+  border-radius: 4px;
+  
+  &:hover {
+    background: theme.$theme-surface-3;
+  }
+}
+
+// Dark Mode
+@include theme.theme-dark {
+  html {
+    color: theme.$theme-text-primary;
+    background-color: theme.$theme-surface-0;
+  }
+  
+  ::selection {
+    background-color: theme.$theme-primary-dark;
+  }
+}

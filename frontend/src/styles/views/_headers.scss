@@ -1,0 +1,74 @@
+@use '../theme' as theme;
+@use '../theme/colors' as *;
+@use '../theme/spacing' as *;
+@use '../theme/typography' as *;
+
+.view-header {
+  margin-bottom: theme.$spacing-section;
+  
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: theme.$spacing-md;
+    
+    .header-title {
+      font-size: 1.75rem;
+      font-weight: 500;
+      color: theme.$color-text-primary;
+      margin: 0;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: theme.$spacing-sm;
+    }
+  }
+  
+  .search-filter-section {
+    display: flex;
+    gap: theme.$spacing-md;
+    align-items: center;
+    
+    .search-field {
+      flex: 1;
+      max-width: 400px;
+    }
+    
+    .sort-field {
+      width: 200px;
+    }
+    
+    .filter-field {
+      width: 200px;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .view-header {
+    .header-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: theme.$spacing-md;
+      
+      .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+    
+    .search-filter-section {
+      flex-direction: column;
+      align-items: stretch;
+      
+      .search-field,
+      .sort-field,
+      .filter-field {
+        max-width: none;
+        width: 100%;
+      }
+    }
+  }
+} 

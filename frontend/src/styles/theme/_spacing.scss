@@ -1,0 +1,44 @@
+// Spacing System
+:root {
+  // Base spacing unit (8px)
+  --spacing-unit: 8px;
+  
+  // Spacing scale
+  --spacing-xxs: calc(var(--spacing-unit) * 0.25); // 2px
+  --spacing-xs: calc(var(--spacing-unit) * 0.5);   // 4px
+  --spacing-sm: var(--spacing-unit);               // 8px
+  --spacing-md: calc(var(--spacing-unit) * 2);     // 16px
+  --spacing-lg: calc(var(--spacing-unit) * 3);     // 24px
+  --spacing-xl: calc(var(--spacing-unit) * 4);     // 32px
+  --spacing-xxl: calc(var(--spacing-unit) * 6);    // 48px
+  
+  // Component specific spacing
+  --spacing-card: var(--spacing-md);
+  --spacing-section: var(--spacing-xl);
+  --spacing-form: var(--spacing-md);
+  --spacing-list: var(--spacing-sm);
+  
+  // Layout spacing
+  --spacing-page: var(--spacing-xl);
+  --spacing-container: var(--spacing-lg);
+  --spacing-grid: var(--spacing-md);
+}
+
+// SCSS Variables for internal use
+$spacing-unit: var(--spacing-unit);
+$spacing-xxs: var(--spacing-xxs);
+$spacing-xs: var(--spacing-xs);
+$spacing-sm: var(--spacing-sm);
+$spacing-md: var(--spacing-md);
+$spacing-lg: var(--spacing-lg);
+$spacing-xl: var(--spacing-xl);
+$spacing-xxl: var(--spacing-xxl);
+
+$spacing-card: var(--spacing-card);
+$spacing-section: var(--spacing-section);
+$spacing-form: var(--spacing-form);
+$spacing-list: var(--spacing-list);
+
+$spacing-page: var(--spacing-page);
+$spacing-container: var(--spacing-container);
+$spacing-grid: var(--spacing-grid); 
